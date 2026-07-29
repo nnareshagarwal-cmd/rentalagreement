@@ -160,14 +160,14 @@ body.sk-modern {
    ------------------------------------------------------------------------ */
 .field label,
 .form-group label {
-    display: block !important;
-    font-family: var(--sk-font-sans) !important;
-    font-size: var(--sk-font-size-caption, 12px) !important;
-    font-weight: 700 !important;
-    color: var(--sk-color-text-muted, #64748B) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.04em !important;
-    margin-bottom: var(--sk-space-2, 8px) !important;
+    display: block;
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-caption, 12px);
+    font-weight: 700;
+    color: var(--sk-color-text-muted, #64748B);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: var(--sk-space-2, 8px);
 }
 
 .field input[type="text"],
@@ -181,18 +181,40 @@ body.sk-modern {
 .form-group select,
 .form-group textarea,
 .sk-input {
-    width: 100% !important;
-    padding: var(--sk-space-3, 12px) var(--sk-space-4, 16px) !important;
-    background: var(--sk-color-bg-surface, #FFFFFF) !important;
-    border: 1px solid var(--sk-color-border, #E2E8F0) !important;
-    border-radius: var(--sk-radius-sm, 8px) !important;
-    font-family: var(--sk-font-sans) !important;
-    font-size: var(--sk-font-size-body, 14px) !important;
-    color: var(--sk-color-text-main, #0F172A) !important;
-    box-sizing: border-box !important;
+    width: 100%;
+    padding: var(--sk-space-3, 12px) var(--sk-space-4, 16px);
+    background: var(--sk-color-bg-surface, #FFFFFF);
+    border: 1px solid var(--sk-color-border-input, #CBD5E1);
+    border-radius: var(--sk-radius-sm, 8px);
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-body, 14px);
+    font-weight: 500;
+    color: var(--sk-color-text-main, #0F172A);
+    cursor: text;
+    box-sizing: border-box;
+    transition: border-color var(--sk-transition-fast), box-shadow var(--sk-transition-fast);
 }
 
-/* Universal Input Focus Ring State */
+/* Pointer Cursor for Select Dropdowns & Date Pickers */
+.field select,
+.field input[type="date"],
+.form-group select,
+.form-group input[type="date"] {
+    cursor: pointer;
+}
+
+/* Hover State (1px Slightly Darker Slate Border) */
+.field input:hover:not(:disabled),
+.field select:hover:not(:disabled),
+.field textarea:hover:not(:disabled),
+.form-group input:hover:not(:disabled),
+.form-group select:hover:not(:disabled),
+.form-group textarea:hover:not(:disabled),
+.sk-input:hover:not(:disabled) {
+    border-color: var(--sk-color-border-input-hover, #94A3B8);
+}
+
+/* Focus State (1px Emerald Border + Soft Glow Ring) */
 .field input:focus,
 .field select:focus,
 .field textarea:focus,
@@ -200,9 +222,9 @@ body.sk-modern {
 .form-group select:focus,
 .form-group textarea:focus,
 .sk-input:focus {
-    outline: none !important;
-    border-color: var(--sk-color-indigo-500, #6366F1) !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+    outline: none;
+    border-color: var(--sk-color-border-input-focus, #10B981);
+    box-shadow: var(--sk-shadow-focus-ring, 0 0 0 3px rgba(16, 185, 129, 0.15));
 }
 
 /* Checkbox & Radio Alignment */
@@ -210,19 +232,19 @@ body.sk-modern {
 .field input[type="radio"],
 .form-group input[type="checkbox"],
 .form-group input[type="radio"] {
-    width: 16px !important;
-    height: 16px !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    margin-right: var(--sk-space-2, 8px) !important;
-    cursor: pointer !important;
-    accent-color: var(--sk-color-emerald-500, #10B981) !important;
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: var(--sk-space-2, 8px);
+    cursor: pointer;
+    accent-color: var(--sk-color-emerald-500, #10B981);
 }
 
 /* Helper Text Styling */
 .field-hint, small.field-hint {
-    display: block !important;
-    font-size: var(--sk-font-size-caption, 12px) !important;
+    display: block;
+    font-size: var(--sk-font-size-caption, 12px);
     color: var(--sk-color-text-muted, #64748B) !important;
     margin-top: var(--sk-space-1, 4px) !important;
     font-family: var(--sk-font-sans) !important;

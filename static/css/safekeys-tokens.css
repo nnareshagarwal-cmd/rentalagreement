@@ -42,6 +42,12 @@
   --sk-color-text-subtle: #94A3B8; /* Disabled / Captions */
   --sk-color-border:      #E2E8F0; /* Default Component Border */
 
+  /* Form Input Control Tokens */
+  --sk-color-border-input:       #CBD5E1; /* Slate-300: 1px resting border */
+  --sk-color-border-input-hover: #94A3B8; /* Slate-400: hover border */
+  --sk-color-border-input-focus: #10B981; /* Safekeys Emerald: focus border */
+  --sk-shadow-focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.15); /* Soft emerald glow ring */
+
   /* ------------------------------------------------------------------------
      2. Typography Scale
      ------------------------------------------------------------------------ */

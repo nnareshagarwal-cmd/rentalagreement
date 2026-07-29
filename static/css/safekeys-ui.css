@@ -1,406 +1,101 @@
-/* Safekeys — shared UI components */
+/* ==========================================================================
+   SAFEKEYS UI COMPONENT SYSTEM
+   Version: 1.3.0 (Design System Baseline Freeze)
+   Scope: Unified Cards, Typography, Buttons, Inputs, & Badges
+   ========================================================================== */
 
-/* Modern app shell */
+/* ------------------------------------------------------------------------
+   1. App Shell & Layout Structure
+   ------------------------------------------------------------------------ */
 body.sk-modern {
-    background: var(--bg);
+    background: var(--sk-color-bg-app, #F8FAFC);
 }
 
 .page {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 24px 20px 48px;
+    padding: var(--sk-space-6, 24px) var(--sk-space-4, 16px) var(--sk-space-12, 48px);
 }
 
 .page-wide {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 24px 20px 48px;
+    padding: var(--sk-space-6, 24px) var(--sk-space-4, 16px) var(--sk-space-12, 48px);
 }
 
+/* ------------------------------------------------------------------------
+   2. Typography System
+   ------------------------------------------------------------------------ */
 .page-header {
-    margin-bottom: 24px;
+    margin-bottom: var(--sk-space-6, 24px);
 }
 
 .page-header h1 {
-    font-size: 26px;
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-display-lg, 28px);
     font-weight: 700;
-    margin-bottom: 6px;
+    color: var(--sk-color-text-main, #0F172A);
+    margin-bottom: var(--sk-space-2, 8px);
+    line-height: var(--sk-line-height-tight, 1.2);
 }
 
 .page-header p {
-    color: var(--muted);
-    font-size: 15px;
-}
-
-/* Topbar (task dashboard style) */
-.topbar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    box-shadow: var(--shadow);
-}
-
-.brand {
-    font-weight: 700;
-    color: var(--brand);
-    text-decoration: none;
-    font-size: 17px;
-}
-
-.topbar-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.btn-link {
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    border: 1px solid var(--border);
-    color: var(--text);
-    background: var(--surface);
-}
-
-.btn-link.primary {
-    background: var(--brand);
-    color: white;
-    border-color: var(--brand);
-}
-
-/* Cards */
-.card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 24px;
-    margin-bottom: 20px;
+    font-family: var(--sk-font-sans);
+    color: var(--sk-color-text-muted, #64748B);
+    font-size: var(--sk-font-size-subheading, 16px);
 }
 
 .card-title {
-    font-size: 16px;
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-subheading, 16px);
     font-weight: 700;
-    margin-bottom: 4px;
+    color: var(--sk-color-text-main, #0F172A);
+    margin-bottom: var(--sk-space-1, 4px);
 }
 
 .card-subtitle {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 20px;
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-body, 14px);
+    color: var(--sk-color-text-muted, #64748B);
+    margin-bottom: var(--sk-space-4, 16px);
 }
 
-/* Form fields */
-.field label {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 8px;
-}
-
-.field input,
-.field select,
-.field textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-    outline: none;
-    border-color: var(--brand);
-    box-shadow: 0 0 0 3px rgba(91, 111, 214, 0.15);
-}
-
-/* Buttons */
-.btn-primary {
-    padding: 12px 28px;
-    background: var(--brand);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 0.15s, transform 0.1s;
-    white-space: nowrap;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background: var(--brand-dark);
-}
-
-.btn-primary:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-}
-
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--brand);
-    background: #eef0ff;
-    border: none;
-    border-radius: 8px;
-    text-decoration: none;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s;
-}
-
-.btn-secondary:hover {
-    background: #e0e4ff;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 6px;
-    text-decoration: none;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    cursor: pointer;
-    white-space: nowrap;
-    font-family: inherit;
-}
-
-.btn-sm.primary {
-    background: var(--brand);
-    color: white;
-    border-color: var(--brand);
-}
-
-.btn-sm:hover {
-    border-color: var(--brand);
-    color: var(--brand);
-}
-
-.btn-sm.primary:hover {
-    background: var(--brand-dark);
-    color: white;
-}
-
-/* Status badges */
-.status-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 3px 8px;
-    border-radius: 4px;
-    margin-bottom: 6px;
-}
-
-.status-badge.expired {
-    background: var(--danger-bg);
-    color: var(--danger);
-}
-
-.status-badge.due_soon,
-.status-badge.due-soon {
-    background: var(--warn-bg);
-    color: var(--warn);
-}
-
-.empty-state {
-    font-size: 14px;
-    color: var(--muted);
-    padding: 12px 0;
-}
-
-/* Toast messages */
-.message {
-    position: fixed;
-    top: 64px;
-    right: 20px;
-    padding: 14px 18px;
-    border-radius: 8px;
-    display: none;
-    z-index: 200;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: var(--shadow);
-    max-width: 360px;
-}
-
-.message.show {
-    display: block;
-}
-
-.message.error {
-    background: var(--danger-bg);
-    color: #991b1b;
-    border: 1px solid #fecaca;
-}
-
-.message.success {
-    background: var(--success-bg);
-    color: #065f46;
-    border: 1px solid #a7f3d0;
-}
-
-/* Stats grid (tracking dashboards) */
-.stats-section,
-.stats-grid {
-    display: grid;
-    gap: 10px;
-    margin-bottom: 14px;
-}
-
-.stats-section {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-}
-
-.stats-section.stats-filter-active .stat-card:not(.active-stat),
-.stats-grid.stats-filter-active .stat-card:not(.active-stat) {
-    opacity: 0.5;
-    transform: scale(0.97);
-}
-
-.stat-card {
-    position: relative;
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 10px 12px;
-    text-align: center;
-    box-shadow: var(--shadow);
-    cursor: pointer;
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease, background 0.18s ease;
-    font-family: inherit;
-    appearance: none;
-    -webkit-appearance: none;
-    width: 100%;
-}
-
-.stat-card:hover:not(.active-stat) {
-    transform: translateY(-2px);
-    border-color: #c9d0f5;
-    box-shadow: 0 6px 16px rgba(95, 120, 230, 0.12);
-}
-
-.stat-card.active-stat {
-    transform: translateY(-5px) scale(1.04);
-    z-index: 2;
-}
-
-.stat-card.active-stat::before {
-    content: 'SELECTED';
-    position: absolute;
-    top: 7px;
-    right: 7px;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.4px;
-    padding: 3px 7px;
-    border-radius: 999px;
-    line-height: 1;
-}
-
-/* Master file health overlay (home page) */
-.masterfile-corrupt-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    background: rgba(15, 23, 42, 0.72);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.masterfile-corrupt-overlay.show {
-    display: flex;
-}
-
-.masterfile-corrupt-dialog {
-    background: #fff;
-    border: 3px solid var(--danger);
-    border-radius: 14px;
-    max-width: 520px;
-    width: 100%;
-    padding: 28px 24px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-    text-align: center;
-}
-
-.masterfile-corrupt-dialog h2 {
-    color: var(--danger);
-    font-size: 22px;
-    margin-bottom: 12px;
-}
-
-.masterfile-corrupt-dialog p {
-    color: var(--text);
-    font-size: 15px;
-    margin-bottom: 10px;
-}
-
-.masterfile-corrupt-dialog .detail {
-    color: var(--muted);
-    font-size: 13px;
-    word-break: break-word;
-}
-
-/* Loading spinner */
-.loading {
-    display: none;
-    text-align: center;
-    padding: 40px;
-    color: var(--muted);
-}
-
-.loading.show {
-    display: block;
-}
-
-/* ==========================================================================
-   SAFEKEYS DESIGN SYSTEM COMPONENT CLASSES
-   ========================================================================== */
-
+/* ------------------------------------------------------------------------
+   3. Card Component Utility System (.card, .sk-card, .stat-card)
+   ------------------------------------------------------------------------ */
+.card,
 .sk-card {
-    background: var(--sk-color-bg-surface, #ffffff);
+    background: var(--sk-color-bg-surface, #FFFFFF);
     border: 1px solid var(--sk-color-border, #E2E8F0);
     border-radius: var(--sk-radius-lg, 16px);
     box-shadow: var(--sk-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.05));
     padding: var(--sk-space-6, 24px);
-    transition: box-shadow var(--sk-transition-fast, 150ms ease), border-color var(--sk-transition-fast, 150ms ease);
+    margin-bottom: var(--sk-space-6, 24px);
+    box-sizing: border-box;
 }
 
-.sk-card:hover {
-    box-shadow: var(--sk-shadow-md, 0 4px 12px -2px rgba(0, 0, 0, 0.08));
+.stat-card {
+    position: relative;
+    background: var(--sk-color-bg-surface, #FFFFFF);
+    border: 1px solid var(--sk-color-border, #E2E8F0);
+    border-radius: var(--sk-radius-md, 12px);
+    padding: var(--sk-space-4, 16px) var(--sk-space-3, 12px);
+    text-align: center;
+    box-shadow: var(--sk-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.05));
+    cursor: pointer;
+    font-family: var(--sk-font-sans);
+    width: 100%;
 }
 
-.sk-btn {
+/* ------------------------------------------------------------------------
+   4. Unified Button Utilities (.sk-btn, .btn-primary, .btn-secondary, .btn-sm)
+   ------------------------------------------------------------------------ */
+.sk-btn,
+.btn-primary,
+.btn-secondary,
+.btn-sm,
+.btn-link,
+.button-group button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -412,97 +107,176 @@ body.sk-modern {
     font-weight: 600;
     cursor: pointer;
     border: 1px solid transparent;
-    transition: all var(--sk-transition-fast, 150ms ease);
     text-decoration: none;
     white-space: nowrap;
+    box-sizing: border-box;
 }
 
-.sk-btn:active {
+.sk-btn:active,
+.btn-primary:active,
+.btn-secondary:active,
+.button-group button:active {
     transform: scale(0.98);
 }
 
-.sk-btn-primary {
-    background-color: var(--sk-color-emerald-500, #10B981);
-    color: #FFFFFF;
-    border-color: var(--sk-color-emerald-500, #10B981);
+/* Primary Button Modifier */
+.sk-btn-primary,
+.btn-primary,
+.btn-link.primary,
+.btn-sm.primary,
+.generate-btn {
+    background-color: var(--sk-color-emerald-500, #10B981) !important;
+    color: #FFFFFF !important;
+    border-color: var(--sk-color-emerald-500, #10B981) !important;
 }
 
-.sk-btn-primary:hover:not(:disabled) {
-    background-color: var(--sk-color-emerald-600, #059669);
-    border-color: var(--sk-color-emerald-600, #059669);
+/* Secondary & Neutral Button Modifiers */
+.sk-btn-secondary,
+.btn-secondary,
+.btn-link,
+.save-btn {
+    background-color: var(--sk-color-bg-surface, #FFFFFF) !important;
+    color: var(--sk-color-text-main, #0F172A) !important;
+    border-color: var(--sk-color-border, #E2E8F0) !important;
 }
 
-.sk-btn-secondary {
-    background-color: var(--sk-color-bg-surface, #FFFFFF);
-    color: var(--sk-color-text-main, #0F172A);
-    border-color: var(--sk-color-border, #E2E8F0);
+.download-doc-btn,
+.generate-pdf-btn {
+    background-color: var(--sk-color-indigo-50, #EEF2FF) !important;
+    color: var(--sk-color-indigo-600, #4F46E5) !important;
+    border-color: rgba(99, 102, 241, 0.2) !important;
 }
 
-.sk-btn-secondary:hover:not(:disabled) {
-    background-color: var(--sk-color-bg-muted, #F1F5F9);
-    border-color: var(--sk-color-primary-600, #334155);
+/* Small Button Size Variant */
+.btn-sm,
+.sk-btn-sm {
+    padding: var(--sk-space-2, 8px) var(--sk-space-3, 12px) !important;
+    font-size: var(--sk-font-size-caption, 12px) !important;
+    border-radius: var(--sk-radius-sm, 8px) !important;
 }
 
+/* ------------------------------------------------------------------------
+   5. Form Control & Input Standardization
+   ------------------------------------------------------------------------ */
+.field label,
+.form-group label {
+    display: block !important;
+    font-family: var(--sk-font-sans) !important;
+    font-size: var(--sk-font-size-caption, 12px) !important;
+    font-weight: 700 !important;
+    color: var(--sk-color-text-muted, #64748B) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    margin-bottom: var(--sk-space-2, 8px) !important;
+}
+
+.field input[type="text"],
+.field input[type="date"],
+.field input[type="number"],
+.field select,
+.field textarea,
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="number"],
+.form-group select,
+.form-group textarea,
 .sk-input {
-    width: 100%;
-    padding: var(--sk-space-3, 12px) var(--sk-space-4, 16px);
-    background: var(--sk-color-bg-surface, #FFFFFF);
-    border: 1px solid var(--sk-color-border, #E2E8F0);
-    border-radius: var(--sk-radius-sm, 8px);
-    font-family: var(--sk-font-sans);
-    font-size: var(--sk-font-size-body, 14px);
-    color: var(--sk-color-text-main, #0F172A);
-    transition: border-color var(--sk-transition-fast), box-shadow var(--sk-transition-fast);
+    width: 100% !important;
+    padding: var(--sk-space-3, 12px) var(--sk-space-4, 16px) !important;
+    background: var(--sk-color-bg-surface, #FFFFFF) !important;
+    border: 1px solid var(--sk-color-border, #E2E8F0) !important;
+    border-radius: var(--sk-radius-sm, 8px) !important;
+    font-family: var(--sk-font-sans) !important;
+    font-size: var(--sk-font-size-body, 14px) !important;
+    color: var(--sk-color-text-main, #0F172A) !important;
+    box-sizing: border-box !important;
 }
 
+/* Universal Input Focus Ring State */
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
 .sk-input:focus {
-    outline: none;
-    border-color: var(--sk-color-indigo-500, #6366F1);
-    box-shadow: var(--sk-shadow-glow);
+    outline: none !important;
+    border-color: var(--sk-color-indigo-500, #6366F1) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
 }
 
+/* Checkbox & Radio Alignment */
+.field input[type="checkbox"],
+.field input[type="radio"],
+.form-group input[type="checkbox"],
+.form-group input[type="radio"] {
+    width: 16px !important;
+    height: 16px !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    margin-right: var(--sk-space-2, 8px) !important;
+    cursor: pointer !important;
+    accent-color: var(--sk-color-emerald-500, #10B981) !important;
+}
+
+/* Helper Text Styling */
+.field-hint, small.field-hint {
+    display: block !important;
+    font-size: var(--sk-font-size-caption, 12px) !important;
+    color: var(--sk-color-text-muted, #64748B) !important;
+    margin-top: var(--sk-space-1, 4px) !important;
+    font-family: var(--sk-font-sans) !important;
+}
+
+/* ------------------------------------------------------------------------
+   6. Badge System Standardization (.status-badge, .sk-badge)
+   ------------------------------------------------------------------------ */
+.status-badge,
 .sk-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 9999px;
+    gap: var(--sk-space-1, 4px);
+    padding: var(--sk-space-1, 4px) var(--sk-space-3, 10px);
+    border-radius: var(--sk-radius-sm, 8px);
+    font-family: var(--sk-font-sans);
     font-size: var(--sk-font-size-caption, 12px);
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
     line-height: 1;
 }
 
-.sk-badge-success {
-    background-color: var(--sk-color-emerald-50, #ECFDF5);
-    color: var(--sk-color-emerald-600, #059669);
-}
-
-.sk-badge-warning {
-    background-color: #FFFBEB;
-    color: #D97706;
-}
-
+.status-badge.expired,
 .sk-badge-danger {
-    background-color: #FEF2F2;
-    color: #DC2626;
+    background: #FEF2F2 !important;
+    color: var(--sk-color-danger, #EF4444) !important;
+}
+
+.status-badge.due_soon,
+.status-badge.due-soon,
+.sk-badge-warning {
+    background: #FFFBEB !important;
+    color: var(--sk-color-warning, #F59E0B) !important;
+}
+
+.sk-badge-success {
+    background: var(--sk-color-emerald-50, #ECFDF5) !important;
+    color: var(--sk-color-emerald-600, #059669) !important;
 }
 
 .sk-badge-info {
-    background-color: #EFF6FF;
-    color: #2563EB;
+    background: #EFF6FF !important;
+    color: var(--sk-color-info, #3B82F6) !important;
 }
 
-/* ==========================================================================
-   SPRINT 1.2 — PREMIUM FORM EXPERIENCE STYLING (REGISTRY CARDS & GRID)
-   ========================================================================== */
-
-/* Prevent horizontal scrolling across all viewports */
+/* ------------------------------------------------------------------------
+   7. Section Cards & Responsive Grid Architecture
+   ------------------------------------------------------------------------ */
 html, body, .container, .form-content, #agreementForm {
     max-width: 100% !important;
     overflow-x: hidden !important;
 }
 
-/* Section Header Banners generated by Registry Renderer */
 .section-header {
     background: var(--sk-color-primary-800, #0F172A) !important;
     color: #FFFFFF !important;
@@ -519,30 +293,19 @@ html, body, .container, .form-content, #agreementForm {
     margin-top: 20px !important;
     margin-bottom: 0 !important;
     box-shadow: var(--sk-shadow-sm, 0 1px 3px rgba(0,0,0,0.05)) !important;
-    transition: background 0.15s ease !important;
 }
 
-.section-header:hover {
-    background: var(--sk-color-primary-900, #0B0F17) !important;
-}
-
-.section-header.collapsed {
-    border-radius: var(--sk-radius-md, 12px) !important;
-}
-
-/* Section Content Visual Card Containers */
 .section-content {
     background: var(--sk-color-bg-surface, #FFFFFF) !important;
     border: 1px solid var(--sk-color-border, #E2E8F0) !important;
     border-top: none !important;
     border-radius: 0 0 var(--sk-radius-md, 12px) var(--sk-radius-md, 12px) !important;
-    padding: 24px !important;
-    margin-bottom: 24px !important;
+    padding: var(--sk-space-6, 24px) !important;
+    margin-bottom: var(--sk-space-6, 24px) !important;
     box-shadow: var(--sk-shadow-sm, 0 1px 3px rgba(0,0,0,0.05)) !important;
     box-sizing: border-box !important;
 }
 
-/* Responsive Grid System: 2-column Desktop, 1-column Mobile/Tablet */
 @media (min-width: 1025px) {
     .section-content {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -560,128 +323,35 @@ html, body, .container, .form-content, #agreementForm {
     }
 }
 
-/* Form Group Field Container & Labels */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 4px;
-}
-
-.form-group label {
-    display: block !important;
-    font-family: var(--sk-font-sans) !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-    color: var(--sk-color-text-muted, #64748B) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.04em !important;
-    margin-bottom: 8px !important;
-}
-
-/* Inputs, Selects, & Textareas Styling */
-.form-group input[type="text"],
-.form-group input[type="date"],
-.form-group input[type="number"],
-.form-group select,
-.form-group textarea {
-    width: 100% !important;
-    padding: 12px 16px !important;
-    background: var(--sk-color-bg-surface, #FFFFFF) !important;
-    border: 1px solid var(--sk-color-border, #E2E8F0) !important;
-    border-radius: var(--sk-radius-sm, 8px) !important;
-    font-family: var(--sk-font-sans) !important;
-    font-size: 14px !important;
-    color: var(--sk-color-text-main, #0F172A) !important;
-    box-sizing: border-box !important;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none !important;
-    border-color: var(--sk-color-indigo-500, #6366F1) !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
-}
-
-/* Checkbox & Radio Button Alignment */
-.form-group input[type="checkbox"],
-.form-group input[type="radio"] {
-    width: 16px !important;
-    height: 16px !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    margin-right: 8px !important;
-    cursor: pointer !important;
-    accent-color: var(--sk-color-emerald-500, #10B981) !important;
-}
-
-/* Helper Text Styling */
-.field-hint, small.field-hint {
-    display: block !important;
-    font-size: 12px !important;
-    color: var(--sk-color-text-muted, #64748B) !important;
-    margin-top: 6px !important;
-    font-family: var(--sk-font-sans) !important;
-}
-
-/* Current Action Area Button Group (In Current Flow Position) */
+/* ------------------------------------------------------------------------
+   8. Button Group Container (Current Flow Position)
+   ------------------------------------------------------------------------ */
 .button-group {
     display: flex !important;
     flex-wrap: wrap !important;
-    gap: 12px !important;
-    margin-top: 32px !important;
-    padding-top: 24px !important;
+    gap: var(--sk-space-3, 12px) !important;
+    margin-top: var(--sk-space-8, 32px) !important;
+    padding-top: var(--sk-space-6, 24px) !important;
     border-top: 1px solid var(--sk-color-border, #E2E8F0) !important;
 }
 
-.button-group button {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    padding: 12px 24px !important;
-    border-radius: var(--sk-radius-sm, 8px) !important;
-    font-family: var(--sk-font-sans) !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    cursor: pointer !important;
-    border: 1px solid transparent !important;
-    transition: all 0.15s ease !important;
-    white-space: nowrap !important;
+/* Toast Messages & Modals */
+.message {
+    position: fixed;
+    top: 64px;
+    right: 20px;
+    padding: 14px 18px;
+    border-radius: var(--sk-radius-sm, 8px);
+    display: none;
+    z-index: 200;
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-body, 14px);
+    font-weight: 500;
+    box-shadow: var(--sk-shadow-md);
+    max-width: 360px;
 }
 
-.button-group button:active {
-    transform: scale(0.98) !important;
-}
+.message.show { display: block; }
+.message.error { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+.message.success { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
 
-.save-btn {
-    background: var(--sk-color-bg-surface, #FFFFFF) !important;
-    color: var(--sk-color-text-main, #0F172A) !important;
-    border: 1px solid var(--sk-color-border, #E2E8F0) !important;
-}
-
-.save-btn:hover {
-    background: var(--sk-color-bg-muted, #F1F5F9) !important;
-}
-
-.generate-btn {
-    background: var(--sk-color-emerald-500, #10B981) !important;
-    color: #FFFFFF !important;
-}
-
-.generate-btn:hover {
-    background: var(--sk-color-emerald-600, #059669) !important;
-}
-
-.download-doc-btn,
-.generate-pdf-btn {
-    background: var(--sk-color-indigo-50, #EEF2FF) !important;
-    color: var(--sk-color-indigo-600, #4F46E5) !important;
-    border: 1px solid rgba(99, 102, 241, 0.2) !important;
-}
-
-.download-doc-btn:hover,
-.generate-pdf-btn:hover {
-    background: #E0E7FF !important;
-}

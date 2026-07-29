@@ -85,7 +85,15 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Wizard Navigation Bar */
+/* Wizard Navigation Controls Container */
+.sk-wizard-nav-controls {
+    display: flex;
+    gap: var(--sk-space-3, 12px);
+    align-items: center;
+    width: 100%;
+    margin-bottom: var(--sk-space-4, 16px);
+}
+
 .sk-wizard-nav {
     display: flex;
     align-items: center;

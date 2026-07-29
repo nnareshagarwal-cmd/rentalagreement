@@ -1,8 +1,8 @@
 /**
- * safekeys_wizard.js — 6-Step Section Visibility Controller (Sprint 2.2)
- * =========================================================================
- * Pure visibility orchestrator that maps existing registry section cards
- * into 6 clean step views without altering form data, validation, or backend logic.
+ * safekeys_wizard.js — 6-Step Section Visibility Controller (Sprint 2.2A Refined)
+ * ==================================================================================
+ * Pure visibility orchestrator that maps existing registry section cards into 6 clean
+ * step views while preserving multi-party count controls, form data, & backend endpoints.
  */
 
 export const WIZARD_STEP_MAP = {
@@ -39,8 +39,8 @@ export function initSafekeysWizard() {
     }
 
     renderStepperBar(stepperContainer);
-    updateStepVisibility(currentStep);
     attachNavigationButtons();
+    updateStepVisibility(currentStep);
 }
 
 function renderStepperBar(container) {
@@ -92,7 +92,7 @@ export function prevStep() {
     }
 }
 
-function updateStepVisibility(activeStep) {
+export function updateStepVisibility(activeStep = currentStep) {
     const sectionHeaders = document.querySelectorAll('.section-header');
     const sectionContents = document.querySelectorAll('.section-content');
 
@@ -101,19 +101,25 @@ function updateStepVisibility(activeStep) {
 
     sectionHeaders.forEach(header => {
         const key = header.dataset.sectionKey;
-        if (showAll || allowedSections.includes(key)) {
+        // Check if section header is hidden by multi-party logic (e.g. owner_2 when count=1)
+        const isMultiPartyHidden = header.style.display === 'none' && !header.dataset.stepHidden;
+
+        if ((showAll || allowedSections.includes(key)) && !isMultiPartyHidden) {
             header.style.display = 'flex';
+            delete header.dataset.stepHidden;
         } else {
             header.style.display = 'none';
+            header.dataset.stepHidden = 'true';
         }
     });
 
     sectionContents.forEach(content => {
         const key = content.dataset.sectionKey;
-        if (showAll || allowedSections.includes(key)) {
-            // Respect collapse state
-            const header = document.querySelector(`.section-header[data-section-key="${key}"]`);
-            const isCollapsed = header && header.classList.contains('collapsed');
+        const header = document.querySelector(`.section-header[data-section-key="${key}"]`);
+        const headerIsVisible = header && header.style.display !== 'none';
+
+        if (headerIsVisible) {
+            const isCollapsed = header.classList.contains('collapsed');
             content.style.display = isCollapsed ? 'none' : 'grid';
         } else {
             content.style.display = 'none';
@@ -127,7 +133,7 @@ function attachNavigationButtons() {
 
     const navControls = document.createElement('div');
     navControls.id = 'skWizardNavControls';
-    navControls.style.cssText = 'display: flex; gap: 12px; align-items: center; width: 100%; margin-bottom: 16px;';
+    navControls.className = 'sk-wizard-nav-controls';
 
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';

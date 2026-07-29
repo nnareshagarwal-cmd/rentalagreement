@@ -6,39 +6,41 @@
 }
 
 :root {
-    --brand: #5b6fd6;
-    --brand-dark: #4a5bc4;
-    --bg: #f0f2f7;
-    --surface: #ffffff;
-    --text: #1f2937;
-    --muted: #6b7280;
-    --border: #e5e7eb;
-    --danger: #dc2626;
-    --danger-bg: #fef2f2;
-    --warn: #d97706;
-    --warn-bg: #fffbeb;
-    --success: #059669;
-    --success-bg: #ecfdf5;
-    --info: #2563eb;
-    --info-bg: #eff6ff;
-    --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.06);
-    --radius: 12px;
+    --brand: var(--sk-color-emerald-500, #10B981);
+    --brand-dark: var(--sk-color-emerald-600, #059669);
+    --bg: var(--sk-color-bg-app, #F8FAFC);
+    --surface: var(--sk-color-bg-surface, #ffffff);
+    --text: var(--sk-color-text-main, #0F172A);
+    --muted: var(--sk-color-text-muted, #64748B);
+    --border: var(--sk-color-border, #E2E8F0);
+    --danger: var(--sk-color-danger, #EF4444);
+    --danger-bg: #FEF2F2;
+    --warn: var(--sk-color-warning, #F59E0B);
+    --warn-bg: #FFFBEB;
+    --success: var(--sk-color-success, #10B981);
+    --success-bg: #ECFDF5;
+    --info: var(--sk-color-info, #3B82F6);
+    --info-bg: #EFF6FF;
+    --shadow: var(--sk-shadow-md, 0 4px 12px -2px rgba(0, 0, 0, 0.08));
+    --radius: var(--sk-radius-lg, 16px);
 
-    /* Legacy shell theme (override per page via inline :root) */
-    --sk-page-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --sk-accent-start: #667eea;
-    --sk-accent-end: #764ba2;
-    --sk-accent-text: #5b21b6;
-    --sk-container-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    /* Legacy shell theme compatibility */
+    --sk-page-bg: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    --sk-accent-start: #10B981;
+    --sk-accent-end: #059669;
+    --sk-accent-text: #059669;
+    --sk-container-shadow: var(--sk-shadow-lg, 0 12px 24px -4px rgba(0, 0, 0, 0.12));
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: var(--text);
+    font-family: var(--sk-font-sans, 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+    color: var(--sk-color-text-main, #0F172A);
+    background-color: var(--sk-color-bg-app, #F8FAFC);
     min-height: 100vh;
-    line-height: 1.5;
+    line-height: var(--sk-line-height-normal, 1.5);
 }
 
 a {
     color: inherit;
+    text-decoration: none;
 }

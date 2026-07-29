@@ -1,0 +1,95 @@
+/* ==========================================================================
+   SAFEKEYS DESIGN SYSTEM TOKENS
+   Version: 1.0.0
+   Scope: Global CSS Custom Properties
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------------
+     1. Color Palette (Dark & Light Token Harmony)
+     ------------------------------------------------------------------------ */
+  /* Brand Primary Slates */
+  --sk-color-primary-950: #070A0F;
+  --sk-color-primary-900: #0B0F17; /* Deep Slate Base */
+  --sk-color-primary-800: #0F172A; /* Deep Surface */
+  --sk-color-primary-700: #1E293B; /* Card Border / Subsurface */
+  --sk-color-primary-600: #334155; /* Neutral Border */
+
+  /* Accent & Brand Colors */
+  --sk-color-emerald-500: #10B981; /* Safekeys Emerald (Primary CTA / Success) */
+  --sk-color-emerald-600: #059669; /* Emerald Hover */
+  --sk-color-emerald-50:  #ECFDF5; /* Emerald Tint Light */
+  
+  --sk-color-indigo-500:  #6366F1; /* Focus Ring & Secondary Accent */
+  --sk-color-indigo-600:  #4F46E5; /* Indigo Hover */
+  --sk-color-indigo-50:   #EEF2FF; /* Indigo Tint Light */
+
+  /* Status Colors */
+  --sk-color-success:     #10B981; /* Valid / Completed */
+  --sk-color-warning:     #F59E0B; /* Review Needed / Caution */
+  --sk-color-danger:      #EF4444; /* Error / Missing Mandatory */
+  --sk-color-info:        #3B82F6; /* Guidance / Informational */
+
+  /* Surfaces & Backgrounds */
+  --sk-color-bg-app:      #F8FAFC; /* Warm Pearl App Canvas */
+  --sk-color-bg-surface:  #FFFFFF; /* Pure White Card Surface */
+  --sk-color-bg-muted:    #F1F5F9; /* Subtle Subsurface */
+  --sk-color-bg-alt:      #F8FAFC; /* Alternate Row Background */
+
+  /* Typography Colors */
+  --sk-color-text-main:   #0F172A; /* Primary Body & Headings */
+  --sk-color-text-muted:  #64748B; /* Labels & Secondary Descriptions */
+  --sk-color-text-subtle: #94A3B8; /* Disabled / Captions */
+  --sk-color-border:      #E2E8F0; /* Default Component Border */
+
+  /* ------------------------------------------------------------------------
+     2. Typography Scale
+     ------------------------------------------------------------------------ */
+  --sk-font-sans:  'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --sk-font-legal: 'Source Serif Pro', Georgia, Garamond, serif;
+
+  --sk-font-size-display-xl: 36px;
+  --sk-font-size-display-lg: 28px;
+  --sk-font-size-heading:    20px;
+  --sk-font-size-subheading: 16px;
+  --sk-font-size-body:       14px;
+  --sk-font-size-caption:    12px;
+
+  --sk-line-height-tight:  1.2;
+  --sk-line-height-normal: 1.5;
+  --sk-line-height-relaxed:1.65;
+
+  /* ------------------------------------------------------------------------
+     3. Spacing Scale (4px Base Grid)
+     ------------------------------------------------------------------------ */
+  --sk-space-1:  4px;
+  --sk-space-2:  8px;
+  --sk-space-3: 12px;
+  --sk-space-4: 16px;
+  --sk-space-6: 24px;
+  --sk-space-8: 32px;
+  --sk-space-12: 48px;
+
+  /* ------------------------------------------------------------------------
+     4. Border Radius Tokens
+     ------------------------------------------------------------------------ */
+  --sk-radius-sm:  8px;   /* Buttons, Badges, Inputs */
+  --sk-radius-md: 12px;   /* Small Cards, Modals */
+  --sk-radius-lg: 16px;   /* Wizard Cards, Containers */
+  --sk-radius-xl: 24px;   /* Floating Bottom Sheets */
+
+  /* ------------------------------------------------------------------------
+     5. Elevation & Shadows
+     ------------------------------------------------------------------------ */
+  --sk-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --sk-shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  --sk-shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.12);
+  --sk-shadow-glow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+
+  /* ------------------------------------------------------------------------
+     6. Motion & Transitions
+     ------------------------------------------------------------------------ */
+  --sk-transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sk-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sk-transition-slow:   350ms cubic-bezier(0.4, 0, 0.2, 1);
+}

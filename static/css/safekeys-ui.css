@@ -382,3 +382,112 @@ body.sk-modern {
 .loading.show {
     display: block;
 }
+
+/* ==========================================================================
+   SAFEKEYS DESIGN SYSTEM COMPONENT CLASSES
+   ========================================================================== */
+
+.sk-card {
+    background: var(--sk-color-bg-surface, #ffffff);
+    border: 1px solid var(--sk-color-border, #E2E8F0);
+    border-radius: var(--sk-radius-lg, 16px);
+    box-shadow: var(--sk-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.05));
+    padding: var(--sk-space-6, 24px);
+    transition: box-shadow var(--sk-transition-fast, 150ms ease), border-color var(--sk-transition-fast, 150ms ease);
+}
+
+.sk-card:hover {
+    box-shadow: var(--sk-shadow-md, 0 4px 12px -2px rgba(0, 0, 0, 0.08));
+}
+
+.sk-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sk-space-2, 8px);
+    padding: var(--sk-space-3, 12px) var(--sk-space-6, 24px);
+    border-radius: var(--sk-radius-sm, 8px);
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-body, 14px);
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all var(--sk-transition-fast, 150ms ease);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.sk-btn:active {
+    transform: scale(0.98);
+}
+
+.sk-btn-primary {
+    background-color: var(--sk-color-emerald-500, #10B981);
+    color: #FFFFFF;
+    border-color: var(--sk-color-emerald-500, #10B981);
+}
+
+.sk-btn-primary:hover:not(:disabled) {
+    background-color: var(--sk-color-emerald-600, #059669);
+    border-color: var(--sk-color-emerald-600, #059669);
+}
+
+.sk-btn-secondary {
+    background-color: var(--sk-color-bg-surface, #FFFFFF);
+    color: var(--sk-color-text-main, #0F172A);
+    border-color: var(--sk-color-border, #E2E8F0);
+}
+
+.sk-btn-secondary:hover:not(:disabled) {
+    background-color: var(--sk-color-bg-muted, #F1F5F9);
+    border-color: var(--sk-color-primary-600, #334155);
+}
+
+.sk-input {
+    width: 100%;
+    padding: var(--sk-space-3, 12px) var(--sk-space-4, 16px);
+    background: var(--sk-color-bg-surface, #FFFFFF);
+    border: 1px solid var(--sk-color-border, #E2E8F0);
+    border-radius: var(--sk-radius-sm, 8px);
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-body, 14px);
+    color: var(--sk-color-text-main, #0F172A);
+    transition: border-color var(--sk-transition-fast), box-shadow var(--sk-transition-fast);
+}
+
+.sk-input:focus {
+    outline: none;
+    border-color: var(--sk-color-indigo-500, #6366F1);
+    box-shadow: var(--sk-shadow-glow);
+}
+
+.sk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: var(--sk-font-size-caption, 12px);
+    font-weight: 600;
+    line-height: 1;
+}
+
+.sk-badge-success {
+    background-color: var(--sk-color-emerald-50, #ECFDF5);
+    color: var(--sk-color-emerald-600, #059669);
+}
+
+.sk-badge-warning {
+    background-color: #FFFBEB;
+    color: #D97706;
+}
+
+.sk-badge-danger {
+    background-color: #FEF2F2;
+    color: #DC2626;
+}
+
+.sk-badge-info {
+    background-color: #EFF6FF;
+    color: #2563EB;
+}

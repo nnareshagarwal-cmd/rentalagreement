@@ -15,6 +15,7 @@ import { numToWords, formatIndianCurrency, calculateEndDate, calculateLockInEndD
 import { checkAuthSession } from './features/auth.js';
 import { attachAadhaarOcrHandlers } from './features/uploads.js';
 import { refreshLivePreview, triggerDebouncedPreview, setupPreviewControls } from './preview.js';
+import { initSafekeysWizard } from './safekeys_wizard.js';
 
 let fieldRegistry = [];
 let sectionLabels = {};
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         sectionOrder = data.section_order || [];
 
         renderRegistryForm();
+        initSafekeysWizard();    // Initialize 6-step section visibility controller
         restoreFormFromLocal();  // Hydrate saved data from localStorage
     } catch (e) {
         console.error('[AgreementAI] Registry fetch failed:', e);

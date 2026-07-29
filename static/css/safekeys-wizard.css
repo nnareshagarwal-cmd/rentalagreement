@@ -1,0 +1,96 @@
+/* ==========================================================================
+   SAFEKEYS WIZARD STEPPER & VISIBILITY CONTROLLER STYLES
+   Version: 2.0.0 (Sprint 2.2)
+   ========================================================================== */
+
+/* Wizard Stepper Header Container */
+.sk-wizard-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--sk-color-bg-surface, #FFFFFF);
+    border: 1px solid var(--sk-color-border, #E2E8F0);
+    border-radius: var(--sk-radius-lg, 16px);
+    padding: var(--sk-space-4, 16px) var(--sk-space-6, 24px);
+    margin-bottom: var(--sk-space-6, 24px);
+    box-shadow: var(--sk-shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+    overflow-x: auto;
+    gap: var(--sk-space-3, 12px);
+}
+
+/* Individual Step Pills */
+.sk-wizard-step-pill {
+    display: flex;
+    align-items: center;
+    gap: var(--sk-space-2, 8px);
+    padding: var(--sk-space-2, 8px) var(--sk-space-3, 12px);
+    border-radius: var(--sk-radius-sm, 8px);
+    font-family: var(--sk-font-sans);
+    font-size: var(--sk-font-size-caption, 12px);
+    font-weight: 600;
+    color: var(--sk-color-text-muted, #64748B);
+    background: transparent;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all var(--sk-transition-fast, 150ms ease);
+    white-space: nowrap;
+}
+
+.sk-wizard-step-pill:hover {
+    color: var(--sk-color-text-main, #0F172A);
+    background: var(--sk-color-bg-muted, #F1F5F9);
+}
+
+.sk-wizard-step-pill.active {
+    background: var(--sk-color-emerald-50, #ECFDF5);
+    color: var(--sk-color-emerald-600, #059669);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.sk-wizard-step-pill.completed {
+    color: var(--sk-color-emerald-600, #059669);
+}
+
+/* Step Number Badge */
+.sk-wizard-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--sk-color-bg-muted, #E2E8F0);
+    color: var(--sk-color-text-muted, #64748B);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.sk-wizard-step-pill.active .sk-wizard-step-number {
+    background: var(--sk-color-emerald-500, #10B981);
+    color: #FFFFFF;
+}
+
+/* Step Card Wrappers */
+.sk-wizard-step-card {
+    display: none;
+}
+
+.sk-wizard-step-card.active-step {
+    display: block;
+    animation: skFadeIn var(--sk-transition-fast, 150ms ease);
+}
+
+@keyframes skFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Wizard Navigation Bar */
+.sk-wizard-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--sk-space-8, 32px);
+    padding-top: var(--sk-space-6, 24px);
+    border-top: 1px solid var(--sk-color-border, #E2E8F0);
+}

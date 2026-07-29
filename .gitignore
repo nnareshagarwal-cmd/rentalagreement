@@ -1,0 +1,13 @@
+.env
+.gemini/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+uploads/*
+!uploads/.gitkeep
+backups_20260725/
+.vscode/
+.idea/

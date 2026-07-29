@@ -1,0 +1,19 @@
+{# Shared Safekeys static assets. Set sk_bundle before including:
+   modern — home page (navbar + modern shell)
+   modern-topbar — task dashboard, invoice dashboard, etc.
+   legacy — gradient tracking/form pages with .container
+   minimal — base tokens only (login)
+#}
+<link rel="stylesheet" href="/static/css/safekeys-base.css?v={{ static_v }}">
+{% if sk_bundle != 'minimal' %}
+<link rel="stylesheet" href="/static/css/safekeys-ui.css?v={{ static_v }}">
+{% endif %}
+{% if sk_bundle == 'modern' %}
+<link rel="stylesheet" href="/static/css/safekeys-navbar.css?v={{ static_v }}">
+{% endif %}
+{% if sk_bundle == 'legacy' %}
+<link rel="stylesheet" href="/static/css/safekeys-legacy-shell.css?v={{ static_v }}">
+{% endif %}
+{% if sk_bundle != 'minimal' %}
+<script src="/static/js/safekeys-common.js?v={{ static_v }}"></script>
+{% endif %}

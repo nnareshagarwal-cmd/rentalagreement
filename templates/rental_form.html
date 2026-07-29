@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/favicons/ra_blue.png?v=20260725_1">
+    <title>Rental Agreement Form</title>
+    
+    {% set sk_bundle = 'legacy' %}
+{% include '_static_assets.html' %}
+<link rel="stylesheet" href="/static/css/main.css?v={{ static_v }}">
+    <link rel="stylesheet" href="/static/css/rental_form.css?v={{ static_v }}">
+</head>
+<body class="sk-legacy">
+    <div class="container">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                <span>🏠</span> Rental Agreement Form
+            </h1>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div id="userAuthBadge"></div>
+                <button type="button" id="headerTogglePreviewBtn" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); transition: all 0.2s ease;">
+                    <span>👁️</span> Toggle Document Preview
+                </button>
+                <a href="/" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; text-decoration: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); transition: all 0.2s ease;">
+                    <span>🏠</span> Home
+                </a>
+            </div>
+        </div>
+        <div class="form-content" id="formContent">
+            <form id="agreementForm">
+                <input type="hidden" id="property_id" name="property_id" />
+                <div id="formFields"></div>
+
+
+
+                <div class="button-group">
+                    <button type="button" id="saveBtn" class="save-btn">💾 Save</button>
+                    <button type="button" id="generateBtn" class="generate-btn">📄 Generate Document</button>
+                    <button type="button" id="downloadDocBtn" class="download-doc-btn">⬇️ Download Document</button>
+                    <button type="button" id="generatePdfBtn" class="generate-pdf-btn">📕 Generate PDF</button>
+                </div>
+            </form>
+
+            <div id="message" class="message"></div>
+            <div class="loading" id="loading">
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <p id="loadingMessage" style="margin-top: 20px; font-size: 16px; font-weight: 600; color: #333;">Processing your submission...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="no-selection" id="noSelection">
+            👆 Select a society to view and fill the rental agreement form
+        </div>
+
+        <!-- Success Popup -->
+        <div class="popup-overlay" id="popupOverlay"></div>
+        <div class="success-popup" id="successPopup">
+            <h2>✓ Success!</h2>
+            <p>Your rental agreement has been created successfully.</p>
+            <p><strong>File Name:</strong></p>
+            <div class="filename-display" id="filenameDisplay"></div>
+            <div class="popup-buttons">
+                <button class="popup-btn btn-open" id="openBtn">📂 Open Document</button>
+                <button class="popup-btn btn-close-popup" id="closePopupBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="previewPane">
+        <div class="preview-header-bar" style="position: sticky; top: -25px; background: white; z-index: 100; margin-top: -25px; padding-top: 15px; padding-bottom: 12px; margin-bottom: 15px; border-bottom: 2px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; font-family: 'Segoe UI', sans-serif;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" id="toggleExpandPreviewBtn" title="Expand Preview / Compress Form" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: transform 0.15s ease;">
+                    <span id="expandIcon" style="font-size: 14px;">◀</span> <span id="expandText">Expand Document</span>
+                </button>
+                <h2 style="font-size: 18px; font-weight: 700; color: #2d3748; margin: 0;">📄 Document Live Preview</h2>
+            </div>
+            <button type="button" id="toggleHidePreviewBtn" style="background: #edf2f7; color: #4a5568; border: 1px solid #cbd5e0; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 12px;">
+                ✖ Hide Preview
+            </button>
+        </div>
+        <div id="previewContent">Fill out the form on the left to see the generated document here...</div>
+    </div>
+
+    <!-- Clause Edit Modal for Option B -->
+    <div id="clauseEditModal" class="popup-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <h3 style="margin-top: 0; margin-bottom: 16px; color: #1e293b; font-size: 18px; font-weight: 700;" id="clauseModalTitle">Edit Clause</h3>
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #475569;">Clause Title (Optional)</label>
+                <input type="text" id="modalClauseTitleInput" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box;" placeholder="e.g. NOTICE PERIOD" />
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #475569;">Clause Text *</label>
+                <textarea id="modalClauseTextInput" rows="6" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; line-height: 1.5; box-sizing: border-box;" placeholder="Enter custom clause text..."></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeClauseModal()" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #64748b;">Cancel</button>
+                <button type="button" onclick="saveClauseEditModal()" style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">Save Clause</button>
+            </div>
+        </div>
+    </div>
+    <!-- Floating Actions Stack (Bottom Right - Floating over Document) -->
+    <div class="floating-actions-stack" style="position:fixed; bottom:24px; right:28px; z-index:99999; display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <button class="floating-circle-btn floating-circle-export" onclick="window.print()" title="Export PDF" style="width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg, #06b6d4, #4f46e5); color:white; border:2px solid rgba(255,255,255,0.4); box-shadow:0 8px 25px rgba(6,182,212,0.5); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; font-weight:700; gap:1px; transition:transform 0.2s;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Export</span>
+      </button>
+
+      <button class="floating-circle-btn floating-circle-ai" onclick="toggleRentalCopilotDrawer()" title="AI Copilot" style="width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg, #8b5cf6, #4f46e5); color:white; border:2px solid rgba(255,255,255,0.4); box-shadow:0 8px 25px rgba(139,92,246,0.6); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; font-weight:700; gap:1px; transition:transform 0.2s;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        <span>AI</span>
+      </button>
+    </div>
+
+    <!-- AI Legal Copilot Slide-Up Drawer (Exact Matching Dark Theme & Prompt Badges) -->
+    <div id="rentalCopilotDrawer" style="display:none; position:fixed; bottom:90px; right:28px; width:380px; max-width:92vw; height:520px; max-height:75vh; background:#0f172a; border:1px solid rgba(139,92,246,0.3); border-radius:18px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:99999; flex-direction:column; padding:18px; backdrop-filter:blur(16px); color:#f8fafc; font-family:'Segoe UI', system-ui, sans-serif;">
+      
+      <!-- Drawer Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px; margin-bottom:14px;">
+        <h4 style="font-size:1rem; font-weight:700; color:#c084fc; display:flex; align-items:center; gap:8px; margin:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          AI Legal Copilot
+        </h4>
+        <button onclick="toggleRentalCopilotDrawer()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:18px; line-height:1;">✕</button>
+      </div>
+
+      <!-- Quick Prompt Pill Badges -->
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+        <button class="copilot-chip" onclick="sendCopilotQuery('Is lock in clause enabled in this agreement?')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
+          🔍 Lock-in Check
+        </button>
+        <button class="copilot-chip" onclick="sendCopilotQuery('What about repair damages? Are they covered?')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
+          🔧 Repair &amp; Damages
+        </button>
+        <button class="copilot-chip" onclick="sendCopilotQuery('Make repair clause more strict for tenant')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
+          🛡️ Enforce Strict Repair
+        </button>
+        <button class="copilot-chip" onclick="sendCopilotQuery('Change notice period to 2 months')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
+          📅 Change Notice to 2 Months
+        </button>
+      </div>
+
+      <!-- Greeting / Chat Box -->
+      <div id="copilotMessages" style="flex:1; overflow-y:auto; font-size:13px; display:flex; flex-direction:column; gap:10px; margin-bottom:14px; padding-right:4px;">
+        <div style="background:rgba(124,58,237,0.15); border:1px solid rgba(139,92,246,0.3); padding:12px 14px; border-radius:12px; color:#e2e8f0; font-size:13px; line-height:1.5;">
+          👋 Hello! Ask me any question about the clauses or tell me to add/modify specific points!
+        </div>
+      </div>
+
+      <!-- Input Area & Send Icon -->
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" id="copilotInput" placeholder="Ask AI about agreement or request edit." style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#ffffff; padding:10px 14px; border-radius:12px; font-size:13px; outline:none;" onkeypress="if(event.key==='Enter') sendCopilotQuery()">
+        <button onclick="sendCopilotQuery(document.getElementById('copilotInput').value)" style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 15px rgba(139,92,246,0.4);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- JavaScript: Load order matters -->
+    <script src="/static/js/property_context_bar.js?v={{ static_v }}"></script>
+    <script src="/static/js/rental_form_utils.js?v={{ static_v }}"></script>
+    <script type="module" src="/static/js/rental_form_core.js?v={{ static_v }}_20260728_v14"></script>
+    <script src="/static/js/rental_form_copilot.js?v={{ static_v }}"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+/* Safekeys — legacy page shell (white container; page inline CSS sets body background) */
+
+body.sk-legacy {
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: var(--sk-container-shadow);
+    padding: 30px;
+    overflow: visible;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    flex-wrap: wrap;
+}
+
+.header-title h1 {
+    color: #333;
+    font-size: 28px;
+    margin-bottom: 6px;
+}
+
+.header-title p {
+    color: #666;
+    font-size: 14px;
+}
+
+.header-title h1:only-child,
+.header-title h1:last-child {
+    margin-bottom: 0;
+}
+
+.header-nav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, var(--sk-accent-start) 0%, var(--sk-accent-end) 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.home-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.home-btn.secondary {
+    background: #fff;
+    color: var(--sk-accent-text);
+    border: 2px solid var(--sk-accent-start);
+    box-shadow: none;
+}
+
+.home-btn.btn-renewal {
+    background: linear-gradient(135deg, var(--sk-accent-start) 0%, var(--sk-accent-end) 100%);
+}
+
+.home-btn.btn-signing {
+    background: #0d9488;
+}
+
+.home-btn.btn-current {
+    background: #0d9488;
+    cursor: default;
+}

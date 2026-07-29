@@ -1,0 +1,44 @@
+/* Safekeys — shared reset and design tokens */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --brand: #5b6fd6;
+    --brand-dark: #4a5bc4;
+    --bg: #f0f2f7;
+    --surface: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --warn: #d97706;
+    --warn-bg: #fffbeb;
+    --success: #059669;
+    --success-bg: #ecfdf5;
+    --info: #2563eb;
+    --info-bg: #eff6ff;
+    --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.06);
+    --radius: 12px;
+
+    /* Legacy shell theme (override per page via inline :root) */
+    --sk-page-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --sk-accent-start: #667eea;
+    --sk-accent-end: #764ba2;
+    --sk-accent-text: #5b21b6;
+    --sk-container-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+a {
+    color: inherit;
+}

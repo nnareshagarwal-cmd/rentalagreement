@@ -238,10 +238,15 @@ RULES:
         elif re.search(r'\b(i am|i\'m|im)\s+(a\s+)?(broker|agent)\b', msg_lower) or "broker" in msg_lower:
             current_state.user_role = "broker"
 
-        # Check if message is a fast structured profile card submission
-        is_profile_msg = bool(re.search(r'\b(?:owner|tenant)\s+profile:\s*', user_message, re.I))
+        # 1. High-speed Offline Rule Extractor (instant sub-millisecond execution for chips, cards, dates, rent, deposit, tenure, names)
+        rule_extracted = self._extract_entities_rule_based(user_message, current_state)
+        if rule_extracted:
+            for k, v in rule_extracted.items():
+                extracted_dict[k] = v
+                confidences[k] = 0.95
 
-        if not is_profile_msg and self.provider == "gemini" and (self.gemini_key or os.getenv("GEMINI_API_KEY")):
+        # 2. If rule extractor didn't match anything and Gemini API is configured, use LLM as smart fallback for unstructured freeform paragraphs
+        if not extracted_dict and self.provider == "gemini" and (self.gemini_key or os.getenv("GEMINI_API_KEY")):
             try:
                 from google import genai
                 from google.genai import types
@@ -295,7 +300,8 @@ User's Message:
 
 Extract agreement fields from the user message.
 """
-                for model_name in ["gemini-2.5-flash", "gemini-flash-latest"]:
+                candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
+                for model_name in candidate_models:
                     try:
                         response = client.models.generate_content(
                             model=model_name,
@@ -318,16 +324,9 @@ Extract agreement fields from the user message.
                                         confidences[lk] = llm_conf.get(lk, 0.9)
                                 break
                     except Exception as model_err:
-                        logger.warning(f"Gemini batch extraction notice ({model_name}): {model_err}")
+                        logger.warning(f"Gemini extraction fallback notice ({model_name}): {model_err}")
             except Exception as e:
-                logger.warning(f"Gemini batch extraction setup notice: {e}")
-
-        # 2. Rule-based offline extractor (ensures robust extraction even without API key or in unit tests)
-        rule_extracted = self._extract_entities_rule_based(user_message, current_state)
-        for k, v in rule_extracted.items():
-            if k not in extracted_dict or not extracted_dict[k]:
-                extracted_dict[k] = v
-                confidences[k] = 0.95
+                logger.warning(f"Gemini extraction setup notice: {e}")
 
         # Clean false-positive names
         for nk in ("owner1_name", "tenant1_name", "owner1_careofname", "tenant1_careofname"):
@@ -1105,9 +1104,9 @@ Use relation_type only as S/O, W/O, D/O, C/O, or an empty string. Convert date_o
 Never invent values. Use an empty string for a value that is absent or unclear. Always mask the Aadhaar number as XXXX-XXXX-last4.
 """
             model_candidates = [
-                getattr(Config, "GEMINI_MODEL", "gemini-2.5-flash"),
-                "gemini-3.1-flash-lite",
-                "gemini-3-flash-preview",
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
                 "gemini-flash-latest",
             ]
 
@@ -1126,15 +1125,14 @@ Never invent values. Use an empty string for a value that is absent or unclear. 
                         break
                 except Exception as m_err:
                     last_err = m_err
-                    if "404" in str(m_err) or "not available" in str(m_err).lower():
-                        continue
-                    if "429" in str(m_err) or "RESOURCE_EXHAUSTED" in str(m_err):
-                        continue
-                    break
+                    logger.warning(f"Aadhaar OCR notice with {model_name}: {m_err}")
+                    continue
 
             if not response or not response.text:
                 if last_err and ("429" in str(last_err) or "RESOURCE_EXHAUSTED" in str(last_err)):
-                    raise AadhaarOcrError("Gemini OCR daily free quota is currently reached for this project. Please type the details or upload a digital PDF Aadhaar.")
+                    raise AadhaarOcrError("Gemini OCR quota limit reached. Please upload an official e-Aadhaar PDF or type details directly.")
+                if last_err and ("503" in str(last_err) or "UNAVAILABLE" in str(last_err)):
+                    raise AadhaarOcrError("Google Gemini Vision service is currently experiencing a temporary server spike. Please re-upload or upload a digital PDF.")
                 raise AadhaarOcrError(f"Could not extract Aadhaar fields: {last_err}")
 
             extracted = json.loads((response.text or "").strip())

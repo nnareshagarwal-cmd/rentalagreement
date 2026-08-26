@@ -238,15 +238,20 @@ RULES:
         elif re.search(r'\b(i am|i\'m|im)\s+(a\s+)?(broker|agent)\b', msg_lower) or "broker" in msg_lower:
             current_state.user_role = "broker"
 
-        # 1. Try Gemini Extraction if configured
-        if self.provider == "gemini" and api_key:
+        # 1. Fast Rule-based offline extractor (instant sub-millisecond execution for structured cards, chips & standard patterns)
+        rule_extracted = self._extract_entities_rule_based(user_message, current_state)
+        if rule_extracted:
+            extracted_dict.update(rule_extracted)
+            for k in rule_extracted:
+                confidences[k] = 0.95
+
+        # 2. If rule extractor didn't capture all needed entities and Gemini API is configured, use LLM for unstructured freeform text
+        if not extracted_dict and self.provider == "gemini" and self.gemini_key:
             try:
                 from google import genai
                 from google.genai import types
-
-                system_prompt = """You are an expert Indian Rental Agreement Data Extraction Engine for AgreementAI.
-Your job is to read the user's message and extract all rental agreement parameters in ONE PASS.
-
+                api_key = self.gemini_key or os.getenv("GEMINI_API_KEY")
+                system_prompt = """You are the AgreementAI Extraction Specialist...
 Target field keys:
 - owner1_name: Full name of property owner/landlord (string)
 - owner1_age: Numeric age in years (string/number, e.g. "35", "52")
@@ -278,17 +283,8 @@ Return ONLY a single valid JSON object:
   "extracted": { "<field_key>": "<extracted_value>" },
   "confidences": { "<field_key>": 0.95 }
 }
-
-RULES:
-- Extract ALL mentioned entities in one pass. Never omit any information provided by user.
-- If a value is not mentioned, do NOT include its key in "extracted".
-- Convert amounts like "40k" to 40000, "55k" to 55000, "3 lakh" to 300000, "80K" or "80k" to 80000, "1.5L" to 150000.
-- If the user says "Father's Name" or "Husband's Name", extract as owner1_careof or tenant1_careof ("Father Name" or "Husband Name"). Do NOT treat "Father" or "Husband" as a person's name!
-- Do NOT extract person names as property addresses or society names.
-- If start date is given (e.g. "1st Sep", "October 1st"), format clearly (e.g. "01-09-2026", "01-10-2026").
 """
                 client = genai.Client(api_key=api_key)
-                candidate_models = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-flash-latest"]
                 known_fields_summary = {k: current_state.get_value(k) for k in (current_state.fields or {}) if current_state.get_value(k)}
                 next_interaction_info = InterviewEngine.plan_next_interaction(current_state)
                 target_focus = next_interaction_info.get("target_fields", [])
@@ -302,11 +298,8 @@ User's Message:
 \"\"\"{user_message}\"\"\"
 
 Extract agreement fields from the user message.
-CRITICAL:
-- If a field is already known (e.g. monthly_rent is {known_fields_summary.get('monthly_rent')}) and user enters a standalone number (e.g. 90000) answering the current question (targeting {target_focus}), assign it ONLY to the target field ({target_focus}), do NOT overwrite monthly_rent.
-- Never extract tenure (e.g. 11 months, 12 months) as monthly_rent.
 """
-                for model_name in candidate_models:
+                for model_name in ["gemini-2.5-flash", "gemini-flash-latest"]:
                     try:
                         response = client.models.generate_content(
                             model=model_name,
@@ -320,21 +313,18 @@ CRITICAL:
                         raw = (response.text or "").strip()
                         parsed = self._safe_parse_json(raw)
                         if isinstance(parsed, dict):
-                            extracted_dict = parsed.get("extracted", parsed)
-                            confidences = parsed.get("confidences", {})
-                            if extracted_dict:
+                            llm_extracted = parsed.get("extracted", parsed)
+                            llm_conf = parsed.get("confidences", {})
+                            if llm_extracted:
+                                for lk, lv in llm_extracted.items():
+                                    if lk not in extracted_dict:
+                                        extracted_dict[lk] = lv
+                                        confidences[lk] = llm_conf.get(lk, 0.9)
                                 break
                     except Exception as model_err:
                         logger.warning(f"Gemini batch extraction notice ({model_name}): {model_err}")
             except Exception as e:
-                logger.warning(f"Gemini batch extraction setup notice: {e}, running fallback extractor.")
-
-        # 2. Rule-based offline extractor (ensures robust extraction even without API key or in unit tests)
-        rule_extracted = self._extract_entities_rule_based(user_message, current_state)
-        for k, v in rule_extracted.items():
-            if k not in extracted_dict or not extracted_dict[k]:
-                extracted_dict[k] = v
-                confidences[k] = 0.9
+                logger.warning(f"Gemini batch extraction setup notice: {e}")
 
         # Clean false-positive names
         for nk in ("owner1_name", "tenant1_name", "owner1_careofname", "tenant1_careofname"):

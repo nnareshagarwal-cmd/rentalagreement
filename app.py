@@ -47,7 +47,7 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable static file browser caching for live updates
 
 # Centralized static asset cache-busting version (Single Source of Truth)
-STATIC_VERSION = os.getenv("STATIC_VERSION", "20260826_v50_unified_dual_party_profile_card")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "20260826_v51_instant_profile_save_and_fastpath")
 
 @app.context_processor
 def inject_static_version():

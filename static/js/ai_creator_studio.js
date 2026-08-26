@@ -820,8 +820,6 @@ async function sendUserMessage(customText = null) {
       })
     });
 
-    removeLoadingBubble(loadId);
-
     if (res.ok) {
       const data = await res.json();
       if (data.assistant_message) {
@@ -842,8 +840,10 @@ async function sendUserMessage(customText = null) {
       appendChatBubble('assistant', '⚠️ Sorry, I could not process that message right now. Please try again.');
     }
   } catch (e) {
-    removeLoadingBubble(loadId);
+    console.warn('[Studio] sendUserMessage error:', e);
     appendChatBubble('assistant', '⚠️ Connection error. Please check your internet and retry.');
+  } finally {
+    removeLoadingBubble(loadId);
   }
 }
 

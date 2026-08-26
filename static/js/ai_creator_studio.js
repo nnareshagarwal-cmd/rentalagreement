@@ -1469,7 +1469,7 @@ async function submitPartyProfileCard(btnEl, partyRole) {
 
   // Disable UI in card
   btnEl.disabled = true;
-  btnEl.innerHTML = '<span>Saving...</span>';
+  btnEl.innerHTML = '<span>Saved ✓</span>';
   card.querySelectorAll('input, button').forEach(el => el.disabled = true);
 
   // Directly update client state
@@ -1478,10 +1478,41 @@ async function submitPartyProfileCard(btnEl, partyRole) {
   currentAgreementState.fields[`${partyRole}1_phone`] = { value: phone, source: 'profile_card', status: 'confirmed' };
   currentAgreementState.fields[`${partyRole}1_email`] = { value: email, source: 'profile_card', status: 'confirmed' };
 
-  // Dispatch message through chat
+  // Dispatch message to backend silently (avoiding repetitive raw user bubble)
   const roleLabel = partyRole === 'owner' ? 'Owner' : 'Tenant';
   const msg = `${roleLabel} profile: ${occ}, mobile ${phone}, email ${email}`;
-  await sendUserMessage(msg);
+  
+  const loadId = appendLoadingBubble();
+  try {
+    const res = await fetch('/api/ai/creator-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        agreement_state: currentAgreementState
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.assistant_message) {
+        const sections = data.assistant_message.split(/\n\s*---\s*\n/);
+        const chips = data.next_interaction?.suggestion_chips || [];
+        const infoTip = data.next_interaction?.info_tip || null;
+        sections.forEach((sec, idx) => {
+          const trimmed = sec.trim();
+          if (trimmed) {
+            const isLast = idx === sections.length - 1;
+            appendChatBubble('assistant', trimmed, isLast ? chips : [], isLast ? infoTip : null);
+          }
+        });
+      }
+      applyStateResponse(data);
+    }
+  } catch (err) {
+    console.warn('[Studio] submitPartyProfileCard error:', err);
+  } finally {
+    removeLoadingBubble(loadId);
+  }
 }
 window.submitPartyProfileCard = submitPartyProfileCard;
 
@@ -1588,7 +1619,7 @@ async function submitDualPartyProfileCard(btnEl) {
 
   // Disable UI in card
   btnEl.disabled = true;
-  btnEl.innerHTML = '<span>Saving...</span>';
+  btnEl.innerHTML = '<span>Saved ✓</span>';
   card.querySelectorAll('input, button').forEach(el => el.disabled = true);
 
   // Directly update client state
@@ -1600,9 +1631,40 @@ async function submitDualPartyProfileCard(btnEl) {
   currentAgreementState.fields['tenant1_phone'] = { value: tenantPhone, source: 'profile_card', status: 'confirmed' };
   currentAgreementState.fields['tenant1_email'] = { value: tenantEmail, source: 'profile_card', status: 'confirmed' };
 
-  // Dispatch message through chat
+  // Dispatch message to backend silently without printing raw user bubble
   const msg = `Owner profile: ${ownerOcc}, mobile ${ownerPhone}, email ${ownerEmail}. Tenant profile: ${tenantOcc}, mobile ${tenantPhone}, email ${tenantEmail}.`;
-  await sendUserMessage(msg);
+  
+  const loadId = appendLoadingBubble();
+  try {
+    const res = await fetch('/api/ai/creator-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        agreement_state: currentAgreementState
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.assistant_message) {
+        const sections = data.assistant_message.split(/\n\s*---\s*\n/);
+        const chips = data.next_interaction?.suggestion_chips || [];
+        const infoTip = data.next_interaction?.info_tip || null;
+        sections.forEach((sec, idx) => {
+          const trimmed = sec.trim();
+          if (trimmed) {
+            const isLast = idx === sections.length - 1;
+            appendChatBubble('assistant', trimmed, isLast ? chips : [], isLast ? infoTip : null);
+          }
+        });
+      }
+      applyStateResponse(data);
+    }
+  } catch (err) {
+    console.warn('[Studio] submitDualPartyProfileCard error:', err);
+  } finally {
+    removeLoadingBubble(loadId);
+  }
 
   // Bring up property search card if property address is missing
   if (!currentAgreementState.fields?.property_address?.value) {

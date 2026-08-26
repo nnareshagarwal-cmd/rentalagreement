@@ -238,20 +238,16 @@ RULES:
         elif re.search(r'\b(i am|i\'m|im)\s+(a\s+)?(broker|agent)\b', msg_lower) or "broker" in msg_lower:
             current_state.user_role = "broker"
 
-        # 1. Fast Rule-based offline extractor (instant sub-millisecond execution for structured cards, chips & standard patterns)
-        rule_extracted = self._extract_entities_rule_based(user_message, current_state)
-        if rule_extracted:
-            extracted_dict.update(rule_extracted)
-            for k in rule_extracted:
-                confidences[k] = 0.95
+        # Check if message is a fast structured profile card submission
+        is_profile_msg = bool(re.search(r'\b(?:owner|tenant)\s+profile:\s*', user_message, re.I))
 
-        # 2. If rule extractor didn't capture all needed entities and Gemini API is configured, use LLM for unstructured freeform text
-        if not extracted_dict and self.provider == "gemini" and self.gemini_key:
+        if not is_profile_msg and self.provider == "gemini" and (self.gemini_key or os.getenv("GEMINI_API_KEY")):
             try:
                 from google import genai
                 from google.genai import types
                 api_key = self.gemini_key or os.getenv("GEMINI_API_KEY")
-                system_prompt = """You are the AgreementAI Extraction Specialist...
+                system_prompt = """You are an expert Indian Rental Agreement Data Extraction Engine for AgreementAI.
+Your job is to read the user's message and extract all rental agreement parameters in ONE PASS.
 Target field keys:
 - owner1_name: Full name of property owner/landlord (string)
 - owner1_age: Numeric age in years (string/number, e.g. "35", "52")
@@ -326,6 +322,13 @@ Extract agreement fields from the user message.
             except Exception as e:
                 logger.warning(f"Gemini batch extraction setup notice: {e}")
 
+        # 2. Rule-based offline extractor (ensures robust extraction even without API key or in unit tests)
+        rule_extracted = self._extract_entities_rule_based(user_message, current_state)
+        for k, v in rule_extracted.items():
+            if k not in extracted_dict or not extracted_dict[k]:
+                extracted_dict[k] = v
+                confidences[k] = 0.95
+
         # Clean false-positive names
         for nk in ("owner1_name", "tenant1_name", "owner1_careofname", "tenant1_careofname"):
             if nk in extracted_dict and str(extracted_dict[nk]).strip().lower() in (
@@ -382,12 +385,13 @@ Extract agreement fields from the user message.
         for k, v in extracted_dict.items():
             if v is not None and str(v).strip() != "":
                 conf = confidences.get(k, 0.9)
+                is_profile_f = k in ("owner1_occupation", "owner1_phone", "owner1_email", "tenant1_occupation", "tenant1_phone", "tenant1_email")
                 current_state.set_field(
                     key=k,
                     value=str(v),
                     source=ProvenanceSource.EXTRACTED_CHAT,
-                    confidence=conf,
-                    status=FieldStatus.EXTRACTED,
+                    confidence=1.0 if is_profile_f else conf,
+                    status=FieldStatus.CONFIRMED if is_profile_f else FieldStatus.EXTRACTED,
                 )
                 newly_extracted_keys.append(k)
 
@@ -995,7 +999,24 @@ Extract agreement fields from the user message.
                 if re.search(pat, tenant_segment, re.I):
                     extracted["tenant1_occupation"] = standard_occ
                     break
+            return extracted
         else:
+            # Check for single party profile format
+            is_single_profile = bool(re.match(r'^(?:owner|tenant)\s+profile:\s*', cleaned, re.I))
+            if is_single_profile:
+                target_p = "tenant1_" if re.match(r'^tenant\s+profile:', cleaned, re.I) else "owner1_"
+                ph = re.search(r'(?:\+?91[\-\s]?)?([6-9]\d{9})\b', cleaned)
+                if ph:
+                    extracted[f"{target_p}phone"] = ph.group(1)
+                em = re.search(r'\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7})\b', cleaned)
+                if em:
+                    extracted[f"{target_p}email"] = em.group(1).lower()
+                for pat, standard_occ in occ_patterns:
+                    if re.search(pat, cleaned, re.I):
+                        extracted[f"{target_p}occupation"] = standard_occ
+                        break
+                return extracted
+
             # 11. Phone Number (10-digit Indian Mobile e.g. 9876543210, +91-9876543210)
             phone_match = re.search(r'(?:\+?91[\-\s]?)?([6-9]\d{9})\b', cleaned)
             if phone_match:

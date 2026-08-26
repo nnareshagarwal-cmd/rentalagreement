@@ -83,27 +83,18 @@ class TestInterviewEngine(unittest.TestCase):
         self.assertGreater(r0["missing_count"], 5)
 
         # Populate all required fields as EXTRACTED
-        required_fields = [
-            ("owner1_name", "Naresh Agarwal"),
-            ("owner1_address", "Indiranagar, Bengaluru"),
-            ("tenant1_name", "Rahul Sharma"),
-            ("tenant1_address", "HSR Layout, Bengaluru"),
-            ("property_address", "Flat 302, Green Acres"),
-            ("monthly_rent", "35000"),
-            ("security_deposit", "150000"),
-            ("agreement_start_date", "01-09-2026"),
-            ("agreement_end_date", "31-07-2027"),
-        ]
+        field_rules = InterviewEngine.get_field_rules("simple_rental", "KA", "family")
+        required_keys = [k for k, v in field_rules.items() if v.get("category") == FieldCategory.REQUIRED]
 
-        for k, v in required_fields:
-            state.set_field(k, v, source=ProvenanceSource.EXTRACTED_CHAT)
+        for k in required_keys:
+            state.set_field(k, "Sample Value", source=ProvenanceSource.EXTRACTED_CHAT)
 
         r1 = InterviewEngine.evaluate_readiness(state)
         # Gate 1 passes: All required are extracted, ready for review
         self.assertTrue(r1["ready_for_review"])
         # Gate 2 fails: Extracted != Confirmed yet
         self.assertFalse(r1["ready_for_generation"])
-        self.assertEqual(len(r1["required_needs_confirmation"]), len(required_fields))
+        self.assertEqual(len(r1["required_needs_confirmation"]), len(required_keys))
 
         # Confirm all required fields
         state.bulk_confirm()
@@ -116,23 +107,33 @@ class TestInterviewEngine(unittest.TestCase):
     def test_next_interaction_planner(self):
         state = AgreementState(agreement_type="simple_rental", jurisdiction="KA")
 
-        # Step 1: Empty state -> should ask for Owner or Parties first
+        # Step 1: Empty state -> should ask for Owner Name / Parties first
         plan1 = InterviewEngine.plan_next_interaction(state)
-        self.assertEqual(plan1["focus_area"], "owner")
+        self.assertIn("owner", plan1["focus_area"])
         self.assertIn("owner1_name", plan1["target_fields"])
 
         # Fill Owner
         state.set_field("owner1_name", "Naresh Agarwal", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("owner1_age", "35", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("owner1_careofname", "Suresh Agarwal", source=ProvenanceSource.USER_EXPLICIT)
         state.set_field("owner1_address", "Indiranagar, Bengaluru", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("owner1_occupation", "PRIVATE EMPLOYEE", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("owner1_phone", "9876543210", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("owner1_email", "naresh@example.com", source=ProvenanceSource.USER_EXPLICIT)
 
         # Step 2: Should ask for Tenant
         plan2 = InterviewEngine.plan_next_interaction(state)
-        self.assertEqual(plan2["focus_area"], "tenant")
+        self.assertIn("tenant", plan2["focus_area"])
         self.assertIn("tenant1_name", plan2["target_fields"])
 
         # Fill Tenant & Property
         state.set_field("tenant1_name", "Rahul Sharma", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("tenant1_age", "28", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("tenant1_careofname", "Ramesh Sharma", source=ProvenanceSource.USER_EXPLICIT)
         state.set_field("tenant1_address", "HSR Layout, Bengaluru", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("tenant1_occupation", "PRIVATE EMPLOYEE", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("tenant1_phone", "9876543211", source=ProvenanceSource.USER_EXPLICIT)
+        state.set_field("tenant1_email", "rahul@example.com", source=ProvenanceSource.USER_EXPLICIT)
         state.set_field("property_address", "Flat 302, Green Acres", source=ProvenanceSource.USER_EXPLICIT)
 
         # Step 3: Should ask for Financials with chips

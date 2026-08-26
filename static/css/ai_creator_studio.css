@@ -366,15 +366,62 @@ body.ai-studio-body {
 /* ═══════════════════════════════════════════════════════════════════ */
 .chat-profile-card {
   margin-top: 14px;
-  padding: 16px 18px;
-  background: linear-gradient(135deg, rgba(30, 27, 75, 0.75), rgba(15, 23, 42, 0.9));
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 16px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.85), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  gap: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
   animation: fadeInTip 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.chat-profile-party-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-profile-party-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.party-badge {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.party-badge.owner {
+  background: rgba(139, 92, 246, 0.25);
+  color: #c084fc;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.party-badge.tenant {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.party-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.chat-profile-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+  margin: 2px 0;
 }
 
 .chat-profile-section-title {

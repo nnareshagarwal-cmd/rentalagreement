@@ -530,7 +530,24 @@ CRITICAL:
             owner_profile_keys = {"owner1_occupation", "owner1_phone", "owner1_email"}
             tenant_profile_keys = {"tenant1_occupation", "tenant1_phone", "tenant1_email"}
 
-            if any(k in owner_profile_keys for k in newly_extracted_keys):
+            has_owner_prof = any(k in owner_profile_keys for k in newly_extracted_keys)
+            has_tenant_prof = any(k in tenant_profile_keys for k in newly_extracted_keys)
+
+            if has_owner_prof and has_tenant_prof:
+                o_name = current_state.get_value("owner1_name") or "Owner"
+                t_name = current_state.get_value("tenant1_name") or "Tenant"
+                o_occ = current_state.get_value("owner1_occupation", "Not specified")
+                o_ph = current_state.get_value("owner1_phone", "Not specified")
+                o_em = current_state.get_value("owner1_email", "Not specified")
+                t_occ = current_state.get_value("tenant1_occupation", "Not specified")
+                t_ph = current_state.get_value("tenant1_phone", "Not specified")
+                t_em = current_state.get_value("tenant1_email", "Not specified")
+                parts.append(
+                    f"✨ **Got it! I've captured contact & profile details for both parties:**\n"
+                    f"• 🏠 **Owner ({o_name}):** {o_occ} | 📱 {o_ph} | 📧 {o_em}\n"
+                    f"• 👤 **Tenant ({t_name}):** {t_occ} | 📱 {t_ph} | 📧 {t_em}"
+                )
+            elif has_owner_prof:
                 o_name = current_state.get_value("owner1_name") or "Owner"
                 occ = current_state.get_value("owner1_occupation", "Not specified")
                 ph = current_state.get_value("owner1_phone", "Not specified")
@@ -541,7 +558,7 @@ CRITICAL:
                     f"• 📱 **Phone:** {ph}\n"
                     f"• 📧 **Email:** {em}"
                 )
-            elif any(k in tenant_profile_keys for k in newly_extracted_keys):
+            elif has_tenant_prof:
                 t_name = current_state.get_value("tenant1_name") or "Tenant"
                 occ = current_state.get_value("tenant1_occupation", "Not specified")
                 ph = current_state.get_value("tenant1_phone", "Not specified")
@@ -946,27 +963,7 @@ CRITICAL:
             n_months = int(notice_match.group(1))
             extracted["notice_period"] = "1 Month" if n_months == 1 else f"{n_months} Months"
 
-        # 11. Phone Number (10-digit Indian Mobile e.g. 9876543210, +91-9876543210)
-        phone_match = re.search(r'(?:\+?91[\-\s]?)?([6-9]\d{9})\b', cleaned)
-        if phone_match:
-            phone_val = phone_match.group(1)
-            is_tenant_phase = bool(current_state and current_state.get_value("owner1_address") and not current_state.get_value("tenant1_phone") and current_state.get_value("tenant1_name"))
-            if user_role == "tenant" or is_tenant_phase:
-                extracted["tenant1_phone"] = phone_val
-            else:
-                extracted["owner1_phone"] = phone_val
-
-        # 12. Email Address (e.g. naresh@example.com)
-        email_match = re.search(r'\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7})\b', cleaned)
-        if email_match:
-            email_val = email_match.group(1).lower()
-            is_tenant_phase = bool(current_state and current_state.get_value("owner1_address") and not current_state.get_value("tenant1_email") and current_state.get_value("tenant1_name"))
-            if user_role == "tenant" or is_tenant_phase:
-                extracted["tenant1_email"] = email_val
-            else:
-                extracted["owner1_email"] = email_val
-
-        # 13. Occupation (Standard Indian Registration Categories)
+        # 11. Dual Party Profile Parsing (e.g. "Owner profile: PRIVATE EMPLOYEE, mobile 9876543210, email owner@test.com. Tenant profile: BUSINESS, mobile 9876543211, email tenant@test.com")
         occ_patterns = [
             (r'\b(?:private\s+(?:employee|sector|job)|pvt\s+emp|software\s+eng(?:ineer)?|it\s+(?:professional|employee)|corporate)\b', "PRIVATE EMPLOYEE"),
             (r'\b(?:government\s+employee|govt\s+emp|civil\s+servant|public\s+sector)\b', "GOVERNMENT EMPLOYEE"),
@@ -977,14 +974,67 @@ CRITICAL:
             (r'\b(?:self[\-\s]*employed|freelancer|contractor)\b', "SELF EMPLOYED"),
             (r'\b(?:housewife|homemaker)\b', "HOUSEWIFE"),
         ]
-        for pat, standard_occ in occ_patterns:
-            if re.search(pat, cleaned, re.I):
-                is_tenant_phase = bool(current_state and current_state.get_value("owner1_address") and not current_state.get_value("tenant1_occupation") and current_state.get_value("tenant1_name"))
-                if user_role == "tenant" or is_tenant_phase:
-                    extracted["tenant1_occupation"] = standard_occ
-                else:
+
+        owner_segment = ""
+        tenant_segment = ""
+        if re.search(r'\bowner(?:\'s)?\s+profile\b', cleaned, re.I) and re.search(r'\btenant(?:\'s)?\s+profile\b', cleaned, re.I):
+            parts_split = re.split(r'\btenant(?:\'s)?\s+profile[:\s]*', cleaned, flags=re.I)
+            if len(parts_split) == 2:
+                owner_segment = parts_split[0]
+                tenant_segment = parts_split[1]
+
+        if owner_segment and tenant_segment:
+            ph_o = re.search(r'(?:\+?91[\-\s]?)?([6-9]\d{9})\b', owner_segment)
+            if ph_o:
+                extracted["owner1_phone"] = ph_o.group(1)
+            em_o = re.search(r'\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7})\b', owner_segment)
+            if em_o:
+                extracted["owner1_email"] = em_o.group(1).lower()
+            for pat, standard_occ in occ_patterns:
+                if re.search(pat, owner_segment, re.I):
                     extracted["owner1_occupation"] = standard_occ
-                break
+                    break
+
+            ph_t = re.search(r'(?:\+?91[\-\s]?)?([6-9]\d{9})\b', tenant_segment)
+            if ph_t:
+                extracted["tenant1_phone"] = ph_t.group(1)
+            em_t = re.search(r'\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7})\b', tenant_segment)
+            if em_t:
+                extracted["tenant1_email"] = em_t.group(1).lower()
+            for pat, standard_occ in occ_patterns:
+                if re.search(pat, tenant_segment, re.I):
+                    extracted["tenant1_occupation"] = standard_occ
+                    break
+        else:
+            # 11. Phone Number (10-digit Indian Mobile e.g. 9876543210, +91-9876543210)
+            phone_match = re.search(r'(?:\+?91[\-\s]?)?([6-9]\d{9})\b', cleaned)
+            if phone_match:
+                phone_val = phone_match.group(1)
+                is_tenant_phase = bool(current_state and current_state.get_value("owner1_address") and not current_state.get_value("tenant1_phone") and current_state.get_value("tenant1_name"))
+                if user_role == "tenant" or is_tenant_phase:
+                    extracted["tenant1_phone"] = phone_val
+                else:
+                    extracted["owner1_phone"] = phone_val
+
+            # 12. Email Address (e.g. naresh@example.com)
+            email_match = re.search(r'\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7})\b', cleaned)
+            if email_match:
+                email_val = email_match.group(1).lower()
+                is_tenant_phase = bool(current_state and current_state.get_value("owner1_address") and not current_state.get_value("tenant1_email") and current_state.get_value("tenant1_name"))
+                if user_role == "tenant" or is_tenant_phase:
+                    extracted["tenant1_email"] = email_val
+                else:
+                    extracted["owner1_email"] = email_val
+
+            # 13. Occupation (Standard Indian Registration Categories)
+            for pat, standard_occ in occ_patterns:
+                if re.search(pat, cleaned, re.I):
+                    is_tenant_phase = bool(current_state and current_state.get_value("owner1_address") and not current_state.get_value("tenant1_occupation") and current_state.get_value("tenant1_name"))
+                    if user_role == "tenant" or is_tenant_phase:
+                        extracted["tenant1_occupation"] = standard_occ
+                    else:
+                        extracted["owner1_occupation"] = standard_occ
+                    break
 
         # Safeguard: Prevent accidental overwrite of confirmed monthly_rent by deposit or duration inputs
         if current_state and current_state.get_value("monthly_rent") and not re.search(r'\b(?:change\s+|update\s+|set\s+)?(?:monthly\s+)?rent(al)?\b', cleaned, re.I):

@@ -404,32 +404,7 @@ class InterviewEngine:
                     "question_text": "What is your **permanent address**?",
                     "suggestion_chips": [],
                 }
-            if "owner1_occupation" in missing_keys or "owner1_phone" in missing_keys or "owner1_email" in missing_keys:
-                o_name = state.get_value("owner1_name") or "Owner"
-                return {
-                    "type": "party_profile",
-                    "focus_area": "owner_profile",
-                    "party_role": "owner",
-                    "party_name": o_name,
-                    "target_fields": ["owner1_occupation", "owner1_phone", "owner1_email"],
-                    "question_text": "Owner Details",
-                    "occupations": [
-                        "PRIVATE EMPLOYEE",
-                        "BUSINESS",
-                    ],
-                }
-
-            # 2. Property Address
-            if "property_address" in missing_keys:
-                return {
-                    "type": "question",
-                    "focus_area": "property",
-                    "target_fields": ["property_address"],
-                    "question_text": "What is the full address of the property being rented (including Flat/Unit No, Society/Building, and City)?",
-                    "suggestion_chips": [],
-                }
-
-            # 3. Tenant Details (sequential steps)
+            # 2. Tenant Details (sequential steps)
             if "tenant1_name" in missing_keys:
                 return {
                     "type": "question",
@@ -483,28 +458,41 @@ class InterviewEngine:
                     "question_text": "What is the tenant's **permanent address**?",
                     "suggestion_chips": [],
                 }
-            if "tenant1_occupation" in missing_keys or "tenant1_phone" in missing_keys or "tenant1_email" in missing_keys:
+            # Both parties' profile details together (if both parties are known or entering profiles)
+            owner_profile_missing = any(k in missing_keys for k in ["owner1_occupation", "owner1_phone", "owner1_email"])
+            tenant_profile_missing = any(k in missing_keys for k in ["tenant1_occupation", "tenant1_phone", "tenant1_email"])
+
+            if (owner_profile_missing or tenant_profile_missing) and (state.get_value("tenant1_name") or "tenant1_name" not in missing_keys):
+                o_name = state.get_value("owner1_name") or "Owner"
                 t_name = state.get_value("tenant1_name") or "Tenant"
                 return {
                     "type": "party_profile",
-                    "focus_area": "tenant_profile",
-                    "party_role": "tenant",
-                    "party_name": t_name,
-                    "target_fields": ["tenant1_occupation", "tenant1_phone", "tenant1_email"],
-                    "question_text": f"Please provide **occupation and contact details** for **{t_name}**:",
+                    "focus_area": "parties_profile",
+                    "party_role": "dual",
+                    "owner_name": o_name,
+                    "tenant_name": t_name,
+                    "target_fields": [
+                        "owner1_occupation", "owner1_phone", "owner1_email",
+                        "tenant1_occupation", "tenant1_phone", "tenant1_email",
+                    ],
+                    "question_text": "Owner & Tenant Details",
                     "occupations": [
                         "PRIVATE EMPLOYEE",
                         "BUSINESS",
-                        "PROFESSIONAL",
-                        "GOVERNMENT EMPLOYEE",
-                        "SELF EMPLOYED",
-                        "HOUSEWIFE",
-                        "RETIRED",
-                        "RETIRED GOVERNMENT EMPLOYEE",
                     ],
                 }
 
-        # 3. Missing Financials
+        # 3. Property Address
+        if "property_address" in missing_keys:
+            return {
+                "type": "question",
+                "focus_area": "property",
+                "target_fields": ["property_address"],
+                "question_text": "What is the full address of the property being rented (including Flat/Unit No, Society/Building, and City)?",
+                "suggestion_chips": [],
+            }
+
+        # 4. Missing Financials
         if "monthly_rent" in missing_keys:
             return {
                 "type": "question",

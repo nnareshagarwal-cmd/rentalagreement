@@ -434,28 +434,38 @@ async function processKickstartFile(role, file) {
       // Re-sync with backend (updates live preview on right)
       await syncStateWithBackend();
 
-      const roleTitle = role === 'owner' ? 'Landlord / Owner' : 'Tenant';
-      const addrSnippet = data.full_address ? `\n\n📍 **Permanent Address:** ${escapeHtml(data.full_address)}` : '';
+      const hasOwner = Boolean(currentAgreementState.fields?.owner1_name?.value);
+      const hasTenant = Boolean(currentAgreementState.fields?.tenant1_name?.value);
 
-      // Bubble 1: Aadhaar verified receipt
-      appendChatBubble('assistant', `✨ **${roleTitle} ID verified!** (${escapeHtml(data.full_name)})${addrSnippet}`);
+      if (hasOwner && hasTenant) {
+        // Both parties are verified!
+        const ownerName = currentAgreementState.fields.owner1_name.value;
+        const tenantName = currentAgreementState.fields.tenant1_name.value;
 
-      // Bubble 2: Interactive Profile & Contact Card
-      appendChatBubble(
-        'assistant',
-        `Please select occupation and provide contact details for **${escapeHtml(data.full_name)}**:`,
-        [],
-        null,
-        {
-          type: 'party_profile',
-          party_role: role,
-          party_name: data.full_name,
-          occupations: [
-            'PRIVATE EMPLOYEE', 'BUSINESS', 'PROFESSIONAL',
-            'GOVERNMENT EMPLOYEE', 'SELF EMPLOYED', 'HOUSEWIFE', 'RETIRED'
-          ]
-        }
-      );
+        // Bubble 1: Celebration receipt for both
+        appendChatBubble('assistant', `🎉 **Both Landlord & Tenant verified from official Aadhaar!**\n\n• 🏠 **Owner:** ${escapeHtml(ownerName)}\n• 👤 **Tenant:** ${escapeHtml(tenantName)}`);
+
+        // Bubble 2: Combined Dual Profile & Contact Card
+        appendChatBubble(
+          'assistant',
+          '**Owner & Tenant Details**',
+          [],
+          null,
+          {
+            type: 'party_profile',
+            party_role: 'dual',
+            owner_name: ownerName,
+            tenant_name: tenantName,
+            occupations: ['PRIVATE EMPLOYEE', 'BUSINESS']
+          }
+        );
+      } else {
+        const nextRole = role === 'owner' ? 'Tenant' : 'Owner';
+        const roleTitle = role === 'owner' ? 'Landlord / Owner' : 'Tenant';
+        const addrSnippet = data.full_address ? `\n\n📍 **Permanent Address:** ${escapeHtml(data.full_address)}` : '';
+
+        appendChatBubble('assistant', `✨ **${roleTitle} ID verified!** (${escapeHtml(data.full_name)})${addrSnippet}\n\nPlease upload the **${nextRole} Aadhaar ID** on the card above:`);
+      }
     } else {
       if (dropzone) {
         dropzone.classList.remove('loading');
@@ -1165,47 +1175,154 @@ function appendChatBubble(role, text, chips = [], infoTip = null, profileData = 
     card.className = 'chat-profile-card';
     const partyRole = profileData.party_role || 'owner';
 
-    const currentOcc = (currentAgreementState?.fields?.[`${partyRole}1_occupation`]?.value || 'PRIVATE EMPLOYEE').toUpperCase();
-    const currentPh = currentAgreementState?.fields?.[`${partyRole}1_phone`]?.value || '';
-    const currentEm = currentAgreementState?.fields?.[`${partyRole}1_email`]?.value || '';
+    if (partyRole === 'dual') {
+      const ownerName = profileData.owner_name || currentAgreementState?.fields?.owner1_name?.value || 'Owner';
+      const tenantName = profileData.tenant_name || currentAgreementState?.fields?.tenant1_name?.value || 'Tenant';
 
-    const isPriv = currentOcc === 'PRIVATE EMPLOYEE';
-    const isBiz = currentOcc === 'BUSINESS';
-    const isOther = !isPriv && !isBiz;
-    const otherVal = isOther ? (currentAgreementState?.fields?.[`${partyRole}1_occupation`]?.value || '') : '';
+      const curOwnerOcc = (currentAgreementState?.fields?.owner1_occupation?.value || 'PRIVATE EMPLOYEE').toUpperCase();
+      const curOwnerPh = currentAgreementState?.fields?.owner1_phone?.value || '';
+      const curOwnerEm = currentAgreementState?.fields?.owner1_email?.value || '';
+      const isOwnerPriv = curOwnerOcc === 'PRIVATE EMPLOYEE';
+      const isOwnerBiz = curOwnerOcc === 'BUSINESS';
+      const isOwnerOther = !isOwnerPriv && !isOwnerBiz;
+      const ownerOtherVal = isOwnerOther ? (currentAgreementState?.fields?.owner1_occupation?.value || '') : '';
 
-    card.innerHTML = `
-      <div>
-        <div class="chat-profile-section-title">💼 Select Occupation</div>
-        <div class="chat-occ-chips" id="${partyRole}OccChips">
-          <button type="button" class="chat-occ-chip${isPriv ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'PRIVATE EMPLOYEE')">PRIVATE EMPLOYEE</button>
-          <button type="button" class="chat-occ-chip${isBiz ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'BUSINESS')">BUSINESS</button>
-          <button type="button" class="chat-occ-chip${isOther ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'OTHER')">✏️ Other...</button>
-        </div>
-        <div class="chat-occ-custom-wrap" id="${partyRole}OccCustomWrap" style="display: ${isOther ? 'block' : 'none'};">
-          <input type="text" id="${partyRole}OccCustomInput" placeholder="Enter occupation (e.g. Doctor, Govt Employee, Homemaker...)" value="${escapeHtml(otherVal)}" oninput="handleCustomOccInput('${partyRole}', this.value)">
-          <span class="chat-profile-error" id="${partyRole}OccErr">Please enter an occupation</span>
-        </div>
-        <input type="hidden" id="${partyRole}OccInput" value="${escapeHtml(currentOcc)}">
-      </div>
+      const curTenantOcc = (currentAgreementState?.fields?.tenant1_occupation?.value || 'PRIVATE EMPLOYEE').toUpperCase();
+      const curTenantPh = currentAgreementState?.fields?.tenant1_phone?.value || '';
+      const curTenantEm = currentAgreementState?.fields?.tenant1_email?.value || '';
+      const isTenantPriv = curTenantOcc === 'PRIVATE EMPLOYEE';
+      const isTenantBiz = curTenantOcc === 'BUSINESS';
+      const isTenantOther = !isTenantPriv && !isTenantBiz;
+      const tenantOtherVal = isTenantOther ? (currentAgreementState?.fields?.tenant1_occupation?.value || '') : '';
 
-      <div class="chat-profile-inputs-row">
-        <div class="chat-profile-field">
-          <label>📱 Mobile Number</label>
-          <input type="tel" class="chat-profile-input" id="${partyRole}PhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(currentPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
-          <span class="chat-profile-error" id="${partyRole}PhoneErr">Please enter a valid 10-digit mobile number</span>
-        </div>
-        <div class="chat-profile-field">
-          <label>📧 Email Address</label>
-          <input type="email" class="chat-profile-input" id="${partyRole}EmailInput" placeholder="name@example.com" value="${escapeHtml(currentEm)}">
-          <span class="chat-profile-error" id="${partyRole}EmailErr">Please enter a valid email address</span>
-        </div>
-      </div>
+      card.innerHTML = `
+        <!-- Section 1: Owner Details -->
+        <div class="chat-profile-party-section">
+          <div class="chat-profile-party-head">
+            <span class="party-badge owner">🏠 Owner</span>
+            <span class="party-name">${escapeHtml(ownerName)}</span>
+          </div>
 
-      <button type="button" class="chat-profile-submit-btn" onclick="submitPartyProfileCard(this, '${partyRole}')">
-        <span>✅ Save & Continue</span>
-      </button>
-    `;
+          <div class="chat-profile-field-group">
+            <div class="chat-profile-section-title">💼 Select Occupation</div>
+            <div class="chat-occ-chips" id="ownerOccChips">
+              <button type="button" class="chat-occ-chip${isOwnerPriv ? ' active' : ''}" onclick="selectPartyProfileOcc(this, 'owner', 'PRIVATE EMPLOYEE')">PRIVATE EMPLOYEE</button>
+              <button type="button" class="chat-occ-chip${isOwnerBiz ? ' active' : ''}" onclick="selectPartyProfileOcc(this, 'owner', 'BUSINESS')">BUSINESS</button>
+              <button type="button" class="chat-occ-chip${isOwnerOther ? ' active' : ''}" onclick="selectPartyProfileOcc(this, 'owner', 'OTHER')">✏️ Other...</button>
+            </div>
+            <div class="chat-occ-custom-wrap" id="ownerOccCustomWrap" style="display: ${isOwnerOther ? 'block' : 'none'};">
+              <input type="text" id="ownerOccCustomInput" placeholder="Enter occupation (e.g. Doctor, Govt Employee, Homemaker...)" value="${escapeHtml(ownerOtherVal)}" oninput="handleCustomOccInput('owner', this.value)">
+              <span class="chat-profile-error" id="ownerOccErr">Please enter an occupation</span>
+            </div>
+            <input type="hidden" id="ownerOccInput" value="${escapeHtml(curOwnerOcc)}">
+          </div>
+
+          <div class="chat-profile-inputs-row">
+            <div class="chat-profile-field">
+              <label>📱 Mobile Number</label>
+              <input type="tel" class="chat-profile-input" id="ownerPhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(curOwnerPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
+              <span class="chat-profile-error" id="ownerPhoneErr">Please enter a valid 10-digit mobile number</span>
+            </div>
+            <div class="chat-profile-field">
+              <label>📧 Email Address</label>
+              <input type="email" class="chat-profile-input" id="ownerEmailInput" placeholder="name@example.com" value="${escapeHtml(curOwnerEm)}">
+              <span class="chat-profile-error" id="ownerEmailErr">Please enter a valid email address</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-profile-divider"></div>
+
+        <!-- Section 2: Tenant Details -->
+        <div class="chat-profile-party-section">
+          <div class="chat-profile-party-head">
+            <span class="party-badge tenant">👤 Tenant</span>
+            <span class="party-name">${escapeHtml(tenantName)}</span>
+          </div>
+
+          <div class="chat-profile-field-group">
+            <div class="chat-profile-section-title">💼 Select Occupation</div>
+            <div class="chat-occ-chips" id="tenantOccChips">
+              <button type="button" class="chat-occ-chip${isTenantPriv ? ' active' : ''}" onclick="selectPartyProfileOcc(this, 'tenant', 'PRIVATE EMPLOYEE')">PRIVATE EMPLOYEE</button>
+              <button type="button" class="chat-occ-chip${isTenantBiz ? ' active' : ''}" onclick="selectPartyProfileOcc(this, 'tenant', 'BUSINESS')">BUSINESS</button>
+              <button type="button" class="chat-occ-chip${isTenantOther ? ' active' : ''}" onclick="selectPartyProfileOcc(this, 'tenant', 'OTHER')">✏️ Other...</button>
+            </div>
+            <div class="chat-occ-custom-wrap" id="tenantOccCustomWrap" style="display: ${isTenantOther ? 'block' : 'none'};">
+              <input type="text" id="tenantOccCustomInput" placeholder="Enter occupation (e.g. Doctor, Govt Employee, Homemaker...)" value="${escapeHtml(tenantOtherVal)}" oninput="handleCustomOccInput('tenant', this.value)">
+              <span class="chat-profile-error" id="tenantOccErr">Please enter an occupation</span>
+            </div>
+            <input type="hidden" id="tenantOccInput" value="${escapeHtml(curTenantOcc)}">
+          </div>
+
+          <div class="chat-profile-inputs-row">
+            <div class="chat-profile-field">
+              <label>📱 Mobile Number</label>
+              <input type="tel" class="chat-profile-input" id="tenantPhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(curTenantPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
+              <span class="chat-profile-error" id="tenantPhoneErr">Please enter a valid 10-digit mobile number</span>
+            </div>
+            <div class="chat-profile-field">
+              <label>📧 Email Address</label>
+              <input type="email" class="chat-profile-input" id="tenantEmailInput" placeholder="name@example.com" value="${escapeHtml(curTenantEm)}">
+              <span class="chat-profile-error" id="tenantEmailErr">Please enter a valid email address</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="chat-profile-submit-btn" onclick="submitDualPartyProfileCard(this)">
+          <span>✅ Save & Continue</span>
+        </button>
+      `;
+    } else {
+      const partyName = profileData.party_name || (partyRole === 'owner' ? 'Owner' : 'Tenant');
+      const currentOcc = (currentAgreementState?.fields?.[`${partyRole}1_occupation`]?.value || 'PRIVATE EMPLOYEE').toUpperCase();
+      const currentPh = currentAgreementState?.fields?.[`${partyRole}1_phone`]?.value || '';
+      const currentEm = currentAgreementState?.fields?.[`${partyRole}1_email`]?.value || '';
+
+      const isPriv = currentOcc === 'PRIVATE EMPLOYEE';
+      const isBiz = currentOcc === 'BUSINESS';
+      const isOther = !isPriv && !isBiz;
+      const otherVal = isOther ? (currentAgreementState?.fields?.[`${partyRole}1_occupation`]?.value || '') : '';
+
+      card.innerHTML = `
+        <div class="chat-profile-party-section">
+          <div class="chat-profile-party-head">
+            <span class="party-badge ${partyRole}">${partyRole === 'owner' ? '🏠 Owner' : '👤 Tenant'}</span>
+            <span class="party-name">${escapeHtml(partyName)}</span>
+          </div>
+
+          <div>
+            <div class="chat-profile-section-title">💼 Select Occupation</div>
+            <div class="chat-occ-chips" id="${partyRole}OccChips">
+              <button type="button" class="chat-occ-chip${isPriv ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'PRIVATE EMPLOYEE')">PRIVATE EMPLOYEE</button>
+              <button type="button" class="chat-occ-chip${isBiz ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'BUSINESS')">BUSINESS</button>
+              <button type="button" class="chat-occ-chip${isOther ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'OTHER')">✏️ Other...</button>
+            </div>
+            <div class="chat-occ-custom-wrap" id="${partyRole}OccCustomWrap" style="display: ${isOther ? 'block' : 'none'};">
+              <input type="text" id="${partyRole}OccCustomInput" placeholder="Enter occupation (e.g. Doctor, Govt Employee, Homemaker...)" value="${escapeHtml(otherVal)}" oninput="handleCustomOccInput('${partyRole}', this.value)">
+              <span class="chat-profile-error" id="${partyRole}OccErr">Please enter an occupation</span>
+            </div>
+            <input type="hidden" id="${partyRole}OccInput" value="${escapeHtml(currentOcc)}">
+          </div>
+
+          <div class="chat-profile-inputs-row">
+            <div class="chat-profile-field">
+              <label>📱 Mobile Number</label>
+              <input type="tel" class="chat-profile-input" id="${partyRole}PhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(currentPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
+              <span class="chat-profile-error" id="${partyRole}PhoneErr">Please enter a valid 10-digit mobile number</span>
+            </div>
+            <div class="chat-profile-field">
+              <label>📧 Email Address</label>
+              <input type="email" class="chat-profile-input" id="${partyRole}EmailInput" placeholder="name@example.com" value="${escapeHtml(currentEm)}">
+              <span class="chat-profile-error" id="${partyRole}EmailErr">Please enter a valid email address</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="chat-profile-submit-btn" onclick="submitPartyProfileCard(this, '${partyRole}')">
+          <span>✅ Save & Continue</span>
+        </button>
+      `;
+    }
     bubble.appendChild(card);
   }
 
@@ -1291,7 +1408,7 @@ function handleCustomOccInput(partyRole, val) {
 window.handleCustomOccInput = handleCustomOccInput;
 
 /**
- * Submit party profile card (occupation + phone + email)
+ * Submit single party profile card (occupation + phone + email)
  */
 async function submitPartyProfileCard(btnEl, partyRole) {
   const card = btnEl.closest('.chat-profile-card');
@@ -1367,6 +1484,132 @@ async function submitPartyProfileCard(btnEl, partyRole) {
   await sendUserMessage(msg);
 }
 window.submitPartyProfileCard = submitPartyProfileCard;
+
+/**
+ * Submit dual party profile card (Owner + Tenant occupation, phone, and email together)
+ */
+async function submitDualPartyProfileCard(btnEl) {
+  const card = btnEl.closest('.chat-profile-card');
+  if (!card) return;
+
+  const ownerOccInput = card.querySelector('#ownerOccInput');
+  const ownerCustomInput = card.querySelector('#ownerOccCustomInput');
+  const ownerOccCustomWrap = card.querySelector('#ownerOccCustomWrap');
+  const ownerOccErr = card.querySelector('#ownerOccErr');
+  const ownerPhoneInput = card.querySelector('#ownerPhoneInput');
+  const ownerEmailInput = card.querySelector('#ownerEmailInput');
+  const ownerPhoneErr = card.querySelector('#ownerPhoneErr');
+  const ownerEmailErr = card.querySelector('#ownerEmailErr');
+
+  const tenantOccInput = card.querySelector('#tenantOccInput');
+  const tenantCustomInput = card.querySelector('#tenantOccCustomInput');
+  const tenantOccCustomWrap = card.querySelector('#tenantOccCustomWrap');
+  const tenantOccErr = card.querySelector('#tenantOccErr');
+  const tenantPhoneInput = card.querySelector('#tenantPhoneInput');
+  const tenantEmailInput = card.querySelector('#tenantEmailInput');
+  const tenantPhoneErr = card.querySelector('#tenantPhoneErr');
+  const tenantEmailErr = card.querySelector('#tenantEmailErr');
+
+  let ownerOcc = ownerOccInput?.value.trim() || 'PRIVATE EMPLOYEE';
+  const ownerPhone = ownerPhoneInput?.value.trim() || '';
+  const ownerEmail = ownerEmailInput?.value.trim() || '';
+
+  let tenantOcc = tenantOccInput?.value.trim() || 'PRIVATE EMPLOYEE';
+  const tenantPhone = tenantPhoneInput?.value.trim() || '';
+  const tenantEmail = tenantEmailInput?.value.trim() || '';
+
+  let isValid = true;
+
+  // Validate Owner
+  if (ownerOccCustomWrap && ownerOccCustomWrap.style.display !== 'none') {
+    const customVal = ownerCustomInput?.value.trim();
+    if (!customVal) {
+      ownerCustomInput?.classList.add('is-invalid');
+      if (ownerOccErr) ownerOccErr.classList.add('visible');
+      isValid = false;
+    } else {
+      ownerCustomInput?.classList.remove('is-invalid');
+      if (ownerOccErr) ownerOccErr.classList.remove('visible');
+      ownerOcc = customVal.toUpperCase();
+    }
+  }
+
+  if (!/^[6-9]\d{9}$/.test(ownerPhone)) {
+    ownerPhoneInput?.classList.add('is-invalid');
+    if (ownerPhoneErr) ownerPhoneErr.classList.add('visible');
+    isValid = false;
+  } else {
+    ownerPhoneInput?.classList.remove('is-invalid');
+    if (ownerPhoneErr) ownerPhoneErr.classList.remove('visible');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) {
+    ownerEmailInput?.classList.add('is-invalid');
+    if (ownerEmailErr) ownerEmailErr.classList.add('visible');
+    isValid = false;
+  } else {
+    ownerEmailInput?.classList.remove('is-invalid');
+    if (ownerEmailErr) ownerEmailErr.classList.remove('visible');
+  }
+
+  // Validate Tenant
+  if (tenantOccCustomWrap && tenantOccCustomWrap.style.display !== 'none') {
+    const customVal = tenantCustomInput?.value.trim();
+    if (!customVal) {
+      tenantCustomInput?.classList.add('is-invalid');
+      if (tenantOccErr) tenantOccErr.classList.add('visible');
+      isValid = false;
+    } else {
+      tenantCustomInput?.classList.remove('is-invalid');
+      if (tenantOccErr) tenantOccErr.classList.remove('visible');
+      tenantOcc = customVal.toUpperCase();
+    }
+  }
+
+  if (!/^[6-9]\d{9}$/.test(tenantPhone)) {
+    tenantPhoneInput?.classList.add('is-invalid');
+    if (tenantPhoneErr) tenantPhoneErr.classList.add('visible');
+    isValid = false;
+  } else {
+    tenantPhoneInput?.classList.remove('is-invalid');
+    if (tenantPhoneErr) tenantPhoneErr.classList.remove('visible');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tenantEmail)) {
+    tenantEmailInput?.classList.add('is-invalid');
+    if (tenantEmailErr) tenantEmailErr.classList.add('visible');
+    isValid = false;
+  } else {
+    tenantEmailInput?.classList.remove('is-invalid');
+    if (tenantEmailErr) tenantEmailErr.classList.remove('visible');
+  }
+
+  if (!isValid) return;
+
+  // Disable UI in card
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span>Saving...</span>';
+  card.querySelectorAll('input, button').forEach(el => el.disabled = true);
+
+  // Directly update client state
+  if (!currentAgreementState.fields) currentAgreementState.fields = {};
+  currentAgreementState.fields['owner1_occupation'] = { value: ownerOcc, source: 'profile_card', status: 'confirmed' };
+  currentAgreementState.fields['owner1_phone'] = { value: ownerPhone, source: 'profile_card', status: 'confirmed' };
+  currentAgreementState.fields['owner1_email'] = { value: ownerEmail, source: 'profile_card', status: 'confirmed' };
+  currentAgreementState.fields['tenant1_occupation'] = { value: tenantOcc, source: 'profile_card', status: 'confirmed' };
+  currentAgreementState.fields['tenant1_phone'] = { value: tenantPhone, source: 'profile_card', status: 'confirmed' };
+  currentAgreementState.fields['tenant1_email'] = { value: tenantEmail, source: 'profile_card', status: 'confirmed' };
+
+  // Dispatch message through chat
+  const msg = `Owner profile: ${ownerOcc}, mobile ${ownerPhone}, email ${ownerEmail}. Tenant profile: ${tenantOcc}, mobile ${tenantPhone}, email ${tenantEmail}.`;
+  await sendUserMessage(msg);
+
+  // Bring up property search card if property address is missing
+  if (!currentAgreementState.fields?.property_address?.value) {
+    renderPropertySearchCard();
+  }
+}
+window.submitDualPartyProfileCard = submitDualPartyProfileCard;
 
 /**
  * Handle clicking an inline button inside a chat card

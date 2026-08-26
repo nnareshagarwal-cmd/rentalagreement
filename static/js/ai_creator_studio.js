@@ -434,18 +434,28 @@ async function processKickstartFile(role, file) {
       // Re-sync with backend (updates live preview on right)
       await syncStateWithBackend();
 
-      // Check if both parties are now verified!
-      const hasOwner = Boolean(currentAgreementState.fields?.owner1_name?.value);
-      const hasTenant = Boolean(currentAgreementState.fields?.tenant1_name?.value);
+      const roleTitle = role === 'owner' ? 'Landlord / Owner' : 'Tenant';
+      const addrSnippet = data.full_address ? `\n\n📍 **Permanent Address:** ${escapeHtml(data.full_address)}` : '';
 
-      if (hasOwner && hasTenant) {
-        appendChatBubble('assistant', `🎉 **Both Landlord & Tenant verified from official Aadhaar!**\n\n• 🏠 **Owner:** ${currentAgreementState.fields.owner1_name.value}\n• 👤 **Tenant:** ${currentAgreementState.fields.tenant1_name.value}`);
-        renderPropertySearchCard();
-      } else {
-        const nextRole = role === 'owner' ? 'Tenant' : 'Owner';
-        appendChatBubble('assistant', `✨ **${role === 'owner' ? 'Owner' : 'Tenant'} ID verified!** (${data.full_name})\n\nPlease upload the **${nextRole} Aadhaar ID** on the card above:`);
-      }
+      // Bubble 1: Aadhaar verified receipt
+      appendChatBubble('assistant', `✨ **${roleTitle} ID verified!** (${escapeHtml(data.full_name)})${addrSnippet}`);
 
+      // Bubble 2: Interactive Profile & Contact Card
+      appendChatBubble(
+        'assistant',
+        `Please select occupation and provide contact details for **${escapeHtml(data.full_name)}**:`,
+        [],
+        null,
+        {
+          type: 'party_profile',
+          party_role: role,
+          party_name: data.full_name,
+          occupations: [
+            'PRIVATE EMPLOYEE', 'BUSINESS', 'PROFESSIONAL',
+            'GOVERNMENT EMPLOYEE', 'SELF EMPLOYED', 'HOUSEWIFE', 'RETIRED'
+          ]
+        }
+      );
     } else {
       if (dropzone) {
         dropzone.classList.remove('loading');
@@ -1154,26 +1164,27 @@ function appendChatBubble(role, text, chips = [], infoTip = null, profileData = 
     const card = document.createElement('div');
     card.className = 'chat-profile-card';
     const partyRole = profileData.party_role || 'owner';
-    const occs = profileData.occupations || [
-      'PRIVATE EMPLOYEE', 'BUSINESS', 'PROFESSIONAL',
-      'GOVERNMENT EMPLOYEE', 'SELF EMPLOYED', 'HOUSEWIFE', 'RETIRED'
-    ];
 
     const currentOcc = (currentAgreementState?.fields?.[`${partyRole}1_occupation`]?.value || 'PRIVATE EMPLOYEE').toUpperCase();
     const currentPh = currentAgreementState?.fields?.[`${partyRole}1_phone`]?.value || '';
     const currentEm = currentAgreementState?.fields?.[`${partyRole}1_email`]?.value || '';
 
-    let occChipsHtml = '';
-    occs.forEach(occ => {
-      const isAct = occ.toUpperCase() === currentOcc ? ' active' : '';
-      occChipsHtml += `<button type="button" class="chat-occ-chip${isAct}" onclick="selectPartyProfileOcc(this, '${escapeHtml(occ)}')">${escapeHtml(occ)}</button>`;
-    });
+    const isPriv = currentOcc === 'PRIVATE EMPLOYEE';
+    const isBiz = currentOcc === 'BUSINESS';
+    const isOther = !isPriv && !isBiz;
+    const otherVal = isOther ? (currentAgreementState?.fields?.[`${partyRole}1_occupation`]?.value || '') : '';
 
     card.innerHTML = `
       <div>
         <div class="chat-profile-section-title">💼 Select Occupation</div>
         <div class="chat-occ-chips" id="${partyRole}OccChips">
-          ${occChipsHtml}
+          <button type="button" class="chat-occ-chip${isPriv ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'PRIVATE EMPLOYEE')">PRIVATE EMPLOYEE</button>
+          <button type="button" class="chat-occ-chip${isBiz ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'BUSINESS')">BUSINESS</button>
+          <button type="button" class="chat-occ-chip${isOther ? ' active' : ''}" onclick="selectPartyProfileOcc(this, '${partyRole}', 'OTHER')">✏️ Other...</button>
+        </div>
+        <div class="chat-occ-custom-wrap" id="${partyRole}OccCustomWrap" style="display: ${isOther ? 'block' : 'none'};">
+          <input type="text" id="${partyRole}OccCustomInput" placeholder="Enter occupation (e.g. Doctor, Govt Employee, Homemaker...)" value="${escapeHtml(otherVal)}" oninput="handleCustomOccInput('${partyRole}', this.value)">
+          <span class="chat-profile-error" id="${partyRole}OccErr">Please enter an occupation</span>
         </div>
         <input type="hidden" id="${partyRole}OccInput" value="${escapeHtml(currentOcc)}">
       </div>
@@ -1181,7 +1192,7 @@ function appendChatBubble(role, text, chips = [], infoTip = null, profileData = 
       <div class="chat-profile-inputs-row">
         <div class="chat-profile-field">
           <label>📱 Mobile Number</label>
-          <input type="tel" class="chat-profile-input" id="${partyRole}PhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(currentPh)}" oninput="this.value = this.value.replace(/\D/g, '')">
+          <input type="tel" class="chat-profile-input" id="${partyRole}PhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(currentPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
           <span class="chat-profile-error" id="${partyRole}PhoneErr">Please enter a valid 10-digit mobile number</span>
         </div>
         <div class="chat-profile-field">
@@ -1237,16 +1248,47 @@ window.toggleChatInfoTip = toggleChatInfoTip;
 /**
  * Select occupation chip in interactive party profile card
  */
-function selectPartyProfileOcc(chipEl, occVal) {
+function selectPartyProfileOcc(chipEl, partyRole, occVal) {
   const parent = chipEl.closest('.chat-occ-chips');
   if (!parent) return;
   parent.querySelectorAll('.chat-occ-chip').forEach(c => c.classList.remove('active'));
   chipEl.classList.add('active');
+
   const card = chipEl.closest('.chat-profile-card');
-  const input = card ? card.querySelector('input[type="hidden"]') : null;
-  if (input) input.value = occVal;
+  if (!card) return;
+
+  const hiddenInput = card.querySelector(`#${partyRole}OccInput`);
+  const customWrap = card.querySelector(`#${partyRole}OccCustomWrap`);
+  const customInput = card.querySelector(`#${partyRole}OccCustomInput`);
+  const occErr = card.querySelector(`#${partyRole}OccErr`);
+
+  if (occErr) occErr.classList.remove('visible');
+
+  if (occVal === 'OTHER') {
+    if (customWrap) customWrap.style.display = 'block';
+    if (customInput) {
+      customInput.focus();
+      if (hiddenInput) hiddenInput.value = customInput.value.trim();
+    }
+  } else {
+    if (customWrap) customWrap.style.display = 'none';
+    if (hiddenInput) hiddenInput.value = occVal;
+  }
 }
 window.selectPartyProfileOcc = selectPartyProfileOcc;
+
+/**
+ * Custom occupation live input handler
+ */
+function handleCustomOccInput(partyRole, val) {
+  const card = document.getElementById(`${partyRole}OccChips`)?.closest('.chat-profile-card');
+  if (!card) return;
+  const hiddenInput = card.querySelector(`#${partyRole}OccInput`);
+  const occErr = card.querySelector(`#${partyRole}OccErr`);
+  if (hiddenInput) hiddenInput.value = val.trim();
+  if (val.trim() && occErr) occErr.classList.remove('visible');
+}
+window.handleCustomOccInput = handleCustomOccInput;
 
 /**
  * Submit party profile card (occupation + phone + email)
@@ -1256,17 +1298,35 @@ async function submitPartyProfileCard(btnEl, partyRole) {
   if (!card) return;
 
   const occInput = card.querySelector(`#${partyRole}OccInput`);
+  const customInput = card.querySelector(`#${partyRole}OccCustomInput`);
+  const occCustomWrap = card.querySelector(`#${partyRole}OccCustomWrap`);
+  const occErr = card.querySelector(`#${partyRole}OccErr`);
+
   const phoneInput = card.querySelector(`#${partyRole}PhoneInput`);
   const emailInput = card.querySelector(`#${partyRole}EmailInput`);
 
   const phoneErr = card.querySelector(`#${partyRole}PhoneErr`);
   const emailErr = card.querySelector(`#${partyRole}EmailErr`);
 
-  const occ = occInput?.value.trim() || 'PRIVATE EMPLOYEE';
+  let occ = occInput?.value.trim() || 'PRIVATE EMPLOYEE';
   const phone = phoneInput?.value.trim() || '';
   const email = emailInput?.value.trim() || '';
 
   let isValid = true;
+
+  // If Other wrap is open, ensure custom occupation is typed
+  if (occCustomWrap && occCustomWrap.style.display !== 'none') {
+    const customVal = customInput?.value.trim();
+    if (!customVal) {
+      customInput?.classList.add('is-invalid');
+      if (occErr) occErr.classList.add('visible');
+      isValid = false;
+    } else {
+      customInput?.classList.remove('is-invalid');
+      if (occErr) occErr.classList.remove('visible');
+      occ = customVal.toUpperCase();
+    }
+  }
 
   // Phone validation (10 digits starting with 6-9)
   if (!/^[6-9]\d{9}$/.test(phone)) {
@@ -1302,7 +1362,8 @@ async function submitPartyProfileCard(btnEl, partyRole) {
   currentAgreementState.fields[`${partyRole}1_email`] = { value: email, source: 'profile_card', status: 'confirmed' };
 
   // Dispatch message through chat
-  const msg = `${occ}, mobile ${phone}, email ${email}`;
+  const roleLabel = partyRole === 'owner' ? 'Owner' : 'Tenant';
+  const msg = `${roleLabel} profile: ${occ}, mobile ${phone}, email ${email}`;
   await sendUserMessage(msg);
 }
 window.submitPartyProfileCard = submitPartyProfileCard;

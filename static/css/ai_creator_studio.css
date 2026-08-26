@@ -423,6 +423,30 @@ body.ai-studio-body {
   box-shadow: 0 2px 10px rgba(139, 92, 246, 0.4);
 }
 
+.chat-occ-custom-wrap {
+  margin-top: 10px;
+  animation: fadeInTip 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.chat-occ-custom-wrap input {
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 10px;
+  color: #f8fafc;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.chat-occ-custom-wrap input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+}
+
 .chat-profile-inputs-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

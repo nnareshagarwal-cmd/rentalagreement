@@ -265,16 +265,10 @@ class InterviewEngine:
                     "party_role": "tenant",
                     "party_name": t_name,
                     "target_fields": ["tenant1_occupation", "tenant1_phone", "tenant1_email"],
-                    "question_text": f"Please provide **occupation and contact details** for **{t_name}**:",
+                    "question_text": "Tenant Details",
                     "occupations": [
                         "PRIVATE EMPLOYEE",
                         "BUSINESS",
-                        "PROFESSIONAL",
-                        "GOVERNMENT EMPLOYEE",
-                        "SELF EMPLOYED",
-                        "HOUSEWIFE",
-                        "RETIRED",
-                        "RETIRED GOVERNMENT EMPLOYEE",
                     ],
                 }
 
@@ -418,16 +412,10 @@ class InterviewEngine:
                     "party_role": "owner",
                     "party_name": o_name,
                     "target_fields": ["owner1_occupation", "owner1_phone", "owner1_email"],
-                    "question_text": f"Please provide **occupation and contact details** for **{o_name}**:",
+                    "question_text": "Owner Details",
                     "occupations": [
                         "PRIVATE EMPLOYEE",
                         "BUSINESS",
-                        "PROFESSIONAL",
-                        "GOVERNMENT EMPLOYEE",
-                        "SELF EMPLOYED",
-                        "HOUSEWIFE",
-                        "RETIRED",
-                        "RETIRED GOVERNMENT EMPLOYEE",
                     ],
                 }
 

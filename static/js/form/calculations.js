@@ -8,7 +8,7 @@ export function numToWords(num) {
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
     num = parseInt(num, 10);
-    if (isNaN(num) || num === 0) return 'Zero';
+    if (isNaN(num) || num === 0) return 'RUPEES ZERO ONLY';
 
     function inWords(n) {
         if (n < 20) return a[n];
@@ -19,7 +19,7 @@ export function numToWords(num) {
         return inWords(Math.floor(n / 10000000)) + 'Crore ' + (n % 10000000 !== 0 ? inWords(n % 10000000) : '');
     }
 
-    return inWords(num).trim() + ' Only';
+    return ('Rupees ' + inWords(num).trim() + ' Only').toUpperCase();
 }
 
 export function formatIndianCurrency(num) {

@@ -30,6 +30,7 @@ class Config:
     # ── AI Provider ────────────────────────────────────────────────────────
     AI_PROVIDER    = os.getenv("AI_PROVIDER", "gemini").lower()
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     # AWS Bedrock (production AI)
     AWS_REGION      = os.getenv("AWS_REGION", "us-east-1")
@@ -40,6 +41,20 @@ class Config:
 
     # ── Google Maps (for future address autocomplete integration) ───────────
     GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+
+    # ── Leegality Digital Signature (Aadhaar / OTP eSign) ───────────────────
+    LEEGALITY_ENV          = os.getenv("LEEGALITY_ENV", "sandbox")
+    LEEGALITY_BASE_URL     = os.getenv("LEEGALITY_BASE_URL", "https://sandbox.leegality.com/api/v3.0").rstrip('/')
+    LEEGALITY_AUTH_TOKEN   = os.getenv("LEEGALITY_AUTH_TOKEN", "")
+    LEEGALITY_PROFILE_ID   = os.getenv("LEEGALITY_PROFILE_ID", "DTc4s6d")
+    LEEGALITY_PRIVATE_SALT = os.getenv("LEEGALITY_PRIVATE_SALT", "")
+
+    # Dynamic Signer Verification & Security Settings
+    LEEGALITY_CAPTURE_PHOTO      = os.getenv("LEEGALITY_CAPTURE_PHOTO", "True").lower() in ("true", "1", "yes")
+    LEEGALITY_SMART_LIVELINESS   = os.getenv("LEEGALITY_SMART_LIVELINESS", "True").lower() in ("true", "1", "yes")
+    LEEGALITY_LIVELINESS_RETRIES = int(os.getenv("LEEGALITY_LIVELINESS_RETRIES", "3"))
+    LEEGALITY_ENABLE_FACE_AUTH   = os.getenv("LEEGALITY_ENABLE_FACE_AUTH", "True").lower() in ("true", "1", "yes")
+    LEEGALITY_ENABLE_GPS         = os.getenv("LEEGALITY_ENABLE_GPS", "True").lower() in ("true", "1", "yes")
 
     # ── Uploads ────────────────────────────────────────────────────────────
     UPLOAD_FOLDER      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")

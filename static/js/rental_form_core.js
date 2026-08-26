@@ -129,21 +129,152 @@ document.addEventListener('DOMContentLoaded', async () => {
     const generateBtn = document.getElementById('generateBtn');
     if (generateBtn) {
         generateBtn.addEventListener('click', async () => {
-            await refreshLivePreview();
-            showMessage('📄 Document generated! Check the preview pane.', 'success');
+            const originalLabel = generateBtn.innerHTML;
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating DOCX…';
+
+            try {
+                await refreshLivePreview();
+
+                const response = await fetch('/api/rental/download-docx', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(getFormData()),
+                });
+                if (!response.ok) {
+                    let errMsg = 'Could not generate the document. Please try again.';
+                    try {
+                        const errData = await response.json();
+                        if (errData && errData.error) errMsg = errData.error;
+                    } catch (_) {}
+                    throw new Error(errMsg);
+                }
+
+                const fileBlob = await response.blob();
+                const downloadUrl = URL.createObjectURL(fileBlob);
+                const link = document.createElement('a');
+                const disposition = response.headers.get('Content-Disposition') || '';
+                const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+                link.href = downloadUrl;
+                link.download = filenameMatch ? filenameMatch[1] : 'Rental_Agreement.docx';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(downloadUrl);
+
+                showMessage('Document generated and downloaded successfully!', 'success');
+            } catch (error) {
+                console.error('[AgreementAI] Document generation failed:', error);
+                showMessage(error.message || 'Could not generate the document. Please try again.', 'error');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = originalLabel;
+            }
         });
     }
 
     // ── Download / PDF buttons ─────────────────────────────────────────────
-    const downloadDocBtn = document.getElementById('downloadDocBtn');
-    if (downloadDocBtn) {
-        downloadDocBtn.addEventListener('click', () => window.print());
-    }
     const generatePdfBtn = document.getElementById('generatePdfBtn');
     if (generatePdfBtn) {
-        generatePdfBtn.addEventListener('click', () => window.print());
+        generatePdfBtn.addEventListener('click', () => window.triggerPdfDownload(generatePdfBtn));
+    }
+
+    const requestEsignBtn = document.getElementById('requestEsignBtn');
+    if (requestEsignBtn) {
+        requestEsignBtn.addEventListener('click', () => window.triggerEsignRequest(requestEsignBtn));
     }
 });
+
+function getFormData() {
+    const formData = {};
+    fieldRegistry.forEach(fieldDef => {
+        const el = document.getElementById(fieldDef.key);
+        if (!el) return;
+        if (fieldDef.type === 'checkbox') {
+            formData[fieldDef.key] = el.checked ? 'Y' : 'N';
+        } else {
+            formData[fieldDef.key] = el.value || '';
+        }
+    });
+    return formData;
+}
+
+window.triggerEsignRequest = function(btnElement) {
+    const payload = getFormData();
+    if (window.safeKeysEsign) {
+        window.safeKeysEsign.initiateEsignFromForm(payload);
+        return;
+    }
+    if (typeof SafeKeysEsignController !== 'undefined') {
+        window.safeKeysEsign = new SafeKeysEsignController();
+        window.safeKeysEsign.initiateEsignFromForm(payload);
+        return;
+    }
+    // Dynamic loader fallback
+    const script = document.createElement('script');
+    script.src = `/static/js/safekeys_esign.js?v=${Date.now()}`;
+    script.onload = () => {
+        if (typeof SafeKeysEsignController !== 'undefined') {
+            window.safeKeysEsign = new SafeKeysEsignController();
+            window.safeKeysEsign.initiateEsignFromForm(payload);
+        } else if (window.safeKeysEsign) {
+            window.safeKeysEsign.initiateEsignFromForm(payload);
+        }
+    };
+    script.onerror = () => {
+        console.error('[AgreementAI] Failed to load safekeys_esign.js');
+        showMessage('Unable to initialize digital signature module. Please refresh the page.', 'error');
+    };
+    document.head.appendChild(script);
+};
+
+window.triggerPdfDownload = async function(btnElement) {
+    let originalLabel = '';
+    if (btnElement) {
+        btnElement.disabled = true;
+        originalLabel = btnElement.innerHTML;
+        btnElement.textContent = 'Preparing PDF…';
+    }
+
+    try {
+        const payload = getFormData();
+        const response = await fetch('/api/rental/download-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            let errMsg = 'Could not generate the PDF document. Please try again.';
+            try {
+                const errData = await response.json();
+                if (errData && errData.error) errMsg = errData.error;
+            } catch (_) {}
+            throw new Error(errMsg);
+        }
+
+        const fileBlob = await response.blob();
+        const downloadUrl = URL.createObjectURL(fileBlob);
+        const link = document.createElement('a');
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+        link.href = downloadUrl;
+        link.download = filenameMatch ? filenameMatch[1] : 'Rental_Agreement.pdf';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(downloadUrl);
+
+        showMessage('PDF generated successfully!', 'success');
+    } catch (error) {
+        console.error('[AgreementAI] PDF download failed:', error);
+        showMessage(error.message || 'Could not generate the PDF document. Please try again.', 'error');
+    } finally {
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalLabel;
+        }
+    }
+};
 
 function renderRegistryForm() {
     const formFieldsDiv = document.getElementById('formFields');

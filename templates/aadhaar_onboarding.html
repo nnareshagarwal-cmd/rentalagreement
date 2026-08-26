@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Start an Agreement | AgreementAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="/static/css/main.css?v={{ static_v }}">
+  <link rel="stylesheet" href="/static/css/aadhaar_onboarding.css?v={{ static_v }}">
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" defer></script>
+</head>
+<body>
+  <div class="glow-mesh"><div class="glow-orb-1"></div><div class="glow-orb-2"></div></div>
+  <nav class="navbar">
+    <a href="/" class="brand-logo">Agreement<span style="color:var(--accent-purple)">AI</span><span class="ai-badge">Pan-India</span></a>
+    <div class="nav-actions"><a href="/" class="btn-secondary">Back to home</a></div>
+  </nav>
+  <main class="onboarding-shell">
+    <div class="onboarding-heading">
+      <span class="eyebrow"><i data-lucide="map-pin"></i> Pan-India rental agreements</span>
+      <h1>Start with your Aadhaar.<br><span>Finish the agreement in minutes.</span></h1>
+      <p>We securely extract party details, then you complete only the property and agreement terms.</p>
+    </div>
+    <section class="onboarding-card">
+      <div class="progress-steps" aria-label="Agreement creation steps"><span class="active">1. Parties</span><span>2. Agreement details</span><span>3. Review & export</span></div>
+      <div class="agreement-choice">
+        <p class="field-label">Which agreement are you preparing?</p>
+        <div class="choice-grid">
+          <button class="agreement-option active" data-agreement="simple_rental" type="button"><i data-lucide="home"></i><strong>Simple Rental</strong><small>Standard tenancy agreement</small></button>
+          <button class="agreement-option" data-agreement="leave_license" type="button"><i data-lucide="scroll-text"></i><strong>Leave &amp; License</strong><small>License agreement with lock-in options</small></button>
+        </div>
+      </div>
+      <div class="party-grid">
+        <article class="party-upload-card">
+          <div class="party-card-head"><span class="party-icon owner"><i data-lucide="building-2"></i></span><div><h2>Owner / Licensor</h2><p>Upload Aadhaar to fill personal details</p></div></div>
+          <label class="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" data-upload="owner"><i data-lucide="upload-cloud"></i><strong>Upload Aadhaar</strong><span>JPG, PNG, WEBP or PDF - front and back if available</span></label>
+          <div class="party-result" id="ownerResult"></div>
+        </article>
+        <article class="party-upload-card">
+          <div class="party-card-head"><span class="party-icon tenant"><i data-lucide="user-round"></i></span><div><h2>Tenant / Licensee</h2><p>Upload Aadhaar to fill personal details</p></div></div>
+          <label class="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" data-upload="tenant"><i data-lucide="upload-cloud"></i><strong>Upload Aadhaar</strong><span>JPG, PNG, WEBP or PDF - front and back if available</span></label>
+          <div class="party-result" id="tenantResult"></div>
+        </article>
+      </div>
+      <p class="privacy-note"><i data-lucide="shield-check"></i> Your source document is processed for extraction and is not retained. Review every extracted value before it is added to the agreement.</p>
+      <div class="onboarding-actions"><a class="manual-link" href="/agreements/simple-rental">Enter details manually</a><button class="btn-primary" id="continueButton" type="button" disabled>Continue to agreement details <i data-lucide="arrow-right"></i></button></div>
+    </section>
+  </main>
+  <script src="/static/js/aadhaar_onboarding.js?v={{ static_v }}"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });</script>
+</body>
+</html>

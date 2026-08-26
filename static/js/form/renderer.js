@@ -10,7 +10,7 @@ export function createFieldElement(fieldDef, value = '') {
     group.className = 'form-group';
     group.id = `form-group-${fieldDef.key}`;
     
-    if (fieldDef.wide || fieldDef.type === 'textarea') {
+    if (fieldDef.wide) {
         group.classList.add('wide-field');
         group.style.gridColumn = 'span 2';
     }
@@ -52,6 +52,7 @@ export function createFieldElement(fieldDef, value = '') {
         case 'textarea':
             inputEl = document.createElement('textarea');
             inputEl.rows = fieldDef.rows || 3;
+            inputEl.setAttribute('spellcheck', 'true');
             break;
         case 'select':
         case 'select_dynamic':
@@ -80,8 +81,16 @@ export function createFieldElement(fieldDef, value = '') {
 
     inputEl.id = fieldDef.key;
     inputEl.name = fieldDef.key;
+    if (/^(owner|tenant)\d+_phone$/.test(fieldDef.key)) {
+        inputEl.type = 'tel';
+        inputEl.inputMode = 'numeric';
+        inputEl.maxLength = 12; // 10 digits plus the two display hyphens
+        inputEl.pattern = '[0-9]{4}-[0-9]{3}-[0-9]{3}';
+        inputEl.placeholder = '1234-567-890';
+        inputEl.title = 'Enter a 10-digit phone number in the format 1234-567-890';
+    }
     if (fieldDef.type !== 'checkbox' && value !== undefined && value !== null) {
-        inputEl.value = value;
+        inputEl.value = (typeof value === 'string' && fieldDef.type !== 'date' && fieldDef.key !== 'annexure') ? value.toUpperCase() : value;
     }
     if (fieldDef.required) inputEl.required = true;
     if (fieldDef.readonly && fieldDef.type !== 'checkbox') inputEl.readOnly = true;
@@ -105,15 +114,22 @@ export function renderSectionHeader(sectionKey, sectionTitle) {
     header.style.gridColumn = '1 / -1';
     header.dataset.sectionKey = sectionKey;
 
-    const icon = document.createElement('span');
-    icon.className = 'section-toggle-icon';
-    icon.textContent = '▼';
+    const titleGroup = document.createElement('div');
+    titleGroup.className = 'section-title-group';
+    titleGroup.style.cssText = 'display: flex; align-items: center; gap: 8px; font-weight: 700;';
 
-    const title = document.createElement('span');
-    title.textContent = sectionTitle;
+    const chevron = document.createElement('span');
+    chevron.className = 'section-toggle-icon';
+    chevron.style.cssText = 'display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);';
+    chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
 
-    header.appendChild(icon);
-    header.appendChild(title);
+    const titleText = document.createElement('span');
+    titleText.className = 'section-title-text';
+    titleText.textContent = sectionTitle;
+
+    titleGroup.appendChild(chevron);
+    titleGroup.appendChild(titleText);
+    header.appendChild(titleGroup);
 
     const sectionContent = document.createElement('div');
     sectionContent.className = 'section-content';
@@ -127,10 +143,10 @@ export function renderSectionHeader(sectionKey, sectionTitle) {
         const isCollapsed = header.classList.toggle('collapsed');
         if (isCollapsed) {
             sectionContent.style.display = 'none';
-            icon.textContent = '▶';
+            chevron.style.transform = 'rotate(-90deg)';
         } else {
             sectionContent.style.display = 'grid';
-            icon.textContent = '▼';
+            chevron.style.transform = 'rotate(0deg)';
         }
     });
 

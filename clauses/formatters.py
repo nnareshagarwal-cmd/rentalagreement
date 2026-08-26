@@ -7,7 +7,31 @@ import re
 from datetime import datetime
 
 def num_to_words(num):
-    return str(num)
+    try:
+        n = int(str(num).replace(',', '').strip())
+    except (ValueError, TypeError):
+        return str(num)
+
+    a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen ']
+    b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+    if n == 0:
+        return 'RUPEES ZERO ONLY'
+
+    def _in_words(val):
+        if val < 20:
+            return a[val]
+        if val < 100:
+            return b[val // 10] + ((' ' + a[val % 10]) if val % 10 != 0 else ' ')
+        if val < 1000:
+            return a[val // 100] + 'Hundred ' + ((_in_words(val % 100)) if val % 100 != 0 else '')
+        if val < 100000:
+            return _in_words(val // 1000) + 'Thousand ' + ((_in_words(val % 1000)) if val % 1000 != 0 else '')
+        if val < 10000000:
+            return _in_words(val // 100000) + 'Lakh ' + ((_in_words(val % 100000)) if val % 100000 != 0 else '')
+        return _in_words(val // 10000000) + 'Crore ' + ((_in_words(val % 10000000)) if val % 10000000 != 0 else '')
+
+    return f"RUPEES {_in_words(n).strip().upper()} ONLY"
 
 def _safe_int(val, default=1):
     try:
@@ -22,7 +46,7 @@ def combine_name_prefix_once(prefix, name):
         return n
     if not n:
         return ''
-    if n.startswith(p):
+    if n.upper().startswith(p.upper()):
         return n
     return f"{p} {n}"
 
@@ -58,6 +82,36 @@ def format_age(val):
         if m:
             return m.group(1)
         return s
+
+KNOWN_CITIES = [
+    "HYDERABAD", "BENGALURU", "BANGALORE", "MUMBAI", "PUNE", "DELHI", "NEW DELHI",
+    "GURGAON", "GURUGRAM", "NOIDA", "GREATER NOIDA", "CHENNAI", "KOLKATA",
+    "AHMEDABAD", "JAIPUR", "CHANDIGARH", "LUCKNOW", "INDORE", "COIMBATORE", "KOCHI",
+    "THIRUVANANTHAPURAM", "VISAKHAPATNAM", "VIJAYAWADA", "MYSORE", "MANGALORE",
+    "NAGPUR", "NASHIK", "SURAT", "VADODARA", "BHOPAL", "PATNA", "RANCHI",
+    "BHUBANESWAR", "GUWAHATI", "SECUNDERABAD", "FARIDABAD", "GHAZIABAD", "THANE"
+]
+
+def extract_city(address_str):
+    if not address_str or not str(address_str).strip():
+        return "HYDERABAD"
+    
+    addr_upper = str(address_str).upper()
+    
+    for city in KNOWN_CITIES:
+        if re.search(r'\b' + re.escape(city) + r'\b', addr_upper):
+            return city.title()
+            
+    parts = [p.strip() for p in addr_upper.split(',') if p.strip()]
+    if len(parts) >= 2:
+        for part in reversed(parts):
+            cleaned = re.sub(r'\b\d{5,6}\b', '', part).strip()
+            cleaned = re.sub(r'\b(TELANGANA|KARNATAKA|MAHARASHTRA|TAMIL NADU|WEST BENGAL|UTTAR PRADESH|HARYANA|GUJARAT|RAJASTHAN|KERALA|ANDHRA PRADESH|MADHYA PRADESH|BIHAR|ODISHA|PUNJAB)\b', '', cleaned).strip()
+            tokens = [t for t in cleaned.split() if len(t) > 2 and not t.isdigit()]
+            if tokens:
+                return tokens[-1].title()
+                
+    return "HYDERABAD"
 
 def format_ordinal_date(date_str):
     if not date_str or not str(date_str).strip():

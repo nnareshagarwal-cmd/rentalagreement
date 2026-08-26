@@ -3,6 +3,129 @@
    Version: 2.0.0 (Sprint 2.2)
    ========================================================================== */
 
+/* Sticky Workspace Header (Editor Bar + Wizard Stepper) */
+.sticky-workspace-header {
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    background: #F8FAFC;
+    padding-top: 12px;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #E2E8F0;
+    transition: box-shadow 200ms ease, background 200ms ease;
+}
+
+.sticky-workspace-header.is-scrolled {
+    background: #FFFFFF;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+/* Step 6: read-only agreement confirmation */
+.section-header[data-step-hidden="true"],
+.section-content[data-step-hidden="true"] {
+    display: none !important;
+}
+.sk-review-summary {
+    margin: 8px 0 24px;
+    font-family: var(--sk-font-sans, system-ui, sans-serif);
+}
+
+.sk-review-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    border: 1px solid #BBF7D0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ECFDF5, #F0FDFA);
+}
+
+.sk-review-heading h2 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    color: #0F172A;
+}
+
+.sk-review-heading p {
+    margin: 0;
+    font-size: 13px;
+    color: #475569;
+}
+
+.sk-review-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.sk-review-card {
+    overflow: hidden;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.sk-review-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 14px;
+    border-bottom: 1px solid #E2E8F0;
+    background: #F8FAFC;
+}
+
+.sk-review-card-header h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #0F172A;
+}
+
+.sk-review-edit-btn {
+    border: 1px solid #BFDBFE;
+    border-radius: 7px;
+    padding: 5px 10px;
+    background: #EFF6FF;
+    color: #1D4ED8;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sk-review-edit-btn:hover { background: #DBEAFE; }
+
+.sk-review-details {
+    display: grid;
+    grid-template-columns: minmax(100px, 0.8fr) minmax(0, 1.2fr);
+    gap: 7px 12px;
+    margin: 0;
+    padding: 14px;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+
+.sk-review-details dt { color: #64748B; font-weight: 600; }
+.sk-review-details dd { margin: 0; color: #0F172A; font-weight: 500; white-space: pre-line; overflow-wrap: anywhere; }
+.sk-review-empty { margin: 0; padding: 14px; color: #64748B; font-size: 13px; }
+
+.sk-review-annexure-card { grid-column: 1 / -1; }
+.sk-review-annexure-content { min-height: 88px; padding: 14px; color: #0F172A; font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
+.sk-review-annexure-editor { display: block; width: 100%; min-height: 160px; padding: 10px; border: 1px solid #BFDBFE; border-radius: 8px; color: #0F172A; font: inherit; line-height: 1.55; resize: vertical; }
+.sk-review-annexure-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.sk-review-save-btn, .sk-review-cancel-btn { border-radius: 7px; padding: 6px 11px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.sk-review-save-btn { border: 1px solid #059669; background: #10B981; color: #FFFFFF; }
+.sk-review-cancel-btn { border: 1px solid #CBD5E1; background: #FFFFFF; color: #475569; }
+
+/* Annexure field is visible in Step 5 (Financial Details) */
+
+@media (max-width: 760px) {
+    .sk-review-grid { grid-template-columns: 1fr; }
+}
+
 /* Wizard Stepper Header Container */
 .sk-wizard-stepper {
     display: flex;
@@ -42,9 +165,13 @@
 }
 
 .sk-wizard-step-pill.active {
-    background: var(--sk-color-emerald-50, #ECFDF5);
-    color: var(--sk-color-emerald-600, #059669);
-    border-color: rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+    color: #047857;
+    border: 1.5px solid #10B981;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    transform: scale(1.04);
+    z-index: 2;
 }
 
 .sk-wizard-step-pill.completed {
@@ -63,11 +190,18 @@
     color: var(--sk-color-text-muted, #64748B);
     font-size: 11px;
     font-weight: 700;
+    transition: all var(--sk-transition-fast, 150ms ease);
 }
 
 .sk-wizard-step-pill.active .sk-wizard-step-number {
-    background: var(--sk-color-emerald-500, #10B981);
+    width: 24px;
+    height: 24px;
+    background: #10B981;
     color: #FFFFFF;
+    font-weight: 800;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    transform: scale(1.05);
 }
 
 /* Step Card Wrappers */
@@ -91,14 +225,15 @@
     gap: var(--sk-space-3, 12px);
     align-items: center;
     width: 100%;
-    margin-bottom: var(--sk-space-4, 16px);
+    margin-top: 10px;
+    margin-bottom: 12px;
 }
 
 .sk-wizard-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: var(--sk-space-8, 32px);
-    padding-top: var(--sk-space-6, 24px);
+    margin-top: 14px;
+    padding-top: 12px;
     border-top: 1px solid var(--sk-color-border, #E2E8F0);
 }

@@ -24,5 +24,8 @@ CSS Load Order
 <link rel="stylesheet" href="/static/css/safekeys-legacy-shell.css?v={{ static_v }}">
 {% endif %}
 {% if sk_bundle != 'minimal' %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="/static/js/safekeys-common.js?v={{ static_v }}"></script>
+<script src="/static/js/safekeys_esign.js?v={{ static_v }}"></script>
 {% endif %}
+

@@ -14,8 +14,10 @@ import json
 import uuid
 import hashlib
 import logging
+from datetime import datetime
+import time
 
-from flask import Flask, render_template, request, jsonify, send_from_directory, session
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, session
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -24,8 +26,14 @@ from cachetools import TTLCache
 
 from config import Config
 from database import init_db, query_db, execute_db, close_pool
-from services.ai_service import ai_service
+from services.ai_service import ai_service, AadhaarOcrError
+from services.agreement_state import AgreementState, FieldEntry, FieldStatus, ProvenanceSource
+from services.interview_engine import InterviewEngine
+from services.places_service import places_service
 from field_registry import FIELD_REGISTRY, SECTION_LABELS, SECTION_ORDER
+from clauses.agreement_renderer import generate_docx, generate_preview_html
+from clauses.pdf_renderer import generate_pdf
+from services.leegality_service import leegality_service, LeegalityError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AgreementAI")
@@ -36,7 +44,24 @@ logger = logging.getLogger("AgreementAI")
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable static file browser caching for live updates
+
+# Centralized static asset cache-busting version (Single Source of Truth)
+STATIC_VERSION = os.getenv("STATIC_VERSION", "20260826_v47_duplicate_apply_state_response_removed")
+
+@app.context_processor
+def inject_static_version():
+    """Inject static_v version string globally into all Jinja templates."""
+    return dict(static_v=f"{STATIC_VERSION}_{int(time.time())}")
+
+@app.after_request
+def add_no_cache_headers(response):
+    """Ensure browser never serves stale JS/CSS or draft responses."""
+    if request.path.startswith(('/create', '/creator-chat', '/api/', '/static/')):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
 
 # CORS — required for mobile apps to call the API
 CORS(app, origins="*", supports_credentials=False)
@@ -82,11 +107,38 @@ def landing_page():
     return render_template('index.html')
 
 
+@app.route('/create')
+@app.route('/studio')
+def ai_creator_studio():
+    """Serve the modern AI Creator Studio workspace."""
+    agreement_type = request.args.get('type', 'simple_rental')
+    state_code = request.args.get('state', 'KA')
+    scenario = request.args.get('scenario', 'family')
+    return render_template(
+        'ai_creator_studio.html',
+        agreement_type=agreement_type,
+        state_code=state_code,
+        scenario=scenario,
+    )
+
+
+@app.route('/start-agreement')
+def start_agreement():
+    """Aadhaar-first agreement onboarding with manual drafting still available."""
+    return render_template('aadhaar_onboarding.html')
+
+
 @app.route('/rental')
 @app.route('/agreements/simple-rental')
 @app.route('/agreements/leave-and-license')
 def rental_form():
     """Serve the split-screen Agreement Form UI."""
+    path = request.path
+    if 'leave-and-license' in path:
+        agreement_title = "Leave and License Agreement Form"
+    else:
+        agreement_title = "Rental Agreement Form"
+
     society     = request.args.get('society', None)
     property_id = request.args.get('property_id', None)
     google_maps_key = Config.GOOGLE_MAPS_API_KEY  # passed to template for future Maps integration
@@ -96,6 +148,7 @@ def rental_form():
         preselected_society=society,
         property_id=property_id,
         google_maps_key=google_maps_key,
+        agreement_title=agreement_title,
     )
 
 
@@ -236,8 +289,7 @@ def api_render_agreement():
         json.dumps(data, sort_keys=True, ensure_ascii=False).encode()
     ).hexdigest()
 
-    if cache_key in _preview_cache:
-        return jsonify({"success": True, "html": _preview_cache[cache_key], "cached": True})
+    _preview_cache.clear()
 
     html_output = ai_service.render_clauses_agreement(data)
     _preview_cache[cache_key] = html_output
@@ -261,6 +313,123 @@ def api_ai_draft():
     return jsonify({"success": True, "data": draft})
 
 
+@app.route('/api/ai/creator-chat', methods=['POST'])
+@limiter.limit("60 per minute")
+def api_ai_creator_chat():
+    """
+    AI Creator Studio Engine Endpoint.
+    Orchestrates: Natural Language Input -> Gemini Extraction -> Agreement State -> Deterministic Engine -> Readiness & Preview.
+    """
+    data = request.json or {}
+    message = data.get('message', '').strip()
+    client_state = data.get('agreement_state') or {}
+    agreement_type = data.get('agreement_type') or client_state.get('agreement_type', 'simple_rental')
+    jurisdiction = data.get('jurisdiction') or client_state.get('jurisdiction', 'KA')
+    scenario = data.get('scenario') or client_state.get('scenario', 'family')
+
+    # Reconstruct AgreementState
+    if client_state and isinstance(client_state, dict) and client_state.get('fields'):
+        state = AgreementState.from_client_payload(client_state)
+    elif client_state and isinstance(client_state, dict):
+        state = AgreementState.from_flat_dict(client_state)
+    else:
+        state = AgreementState(agreement_type=agreement_type, jurisdiction=jurisdiction, scenario=scenario)
+
+    state.agreement_type = agreement_type
+    state.jurisdiction = jurisdiction
+    state.scenario = scenario
+
+    # If message is empty (e.g. init or reload), evaluate readiness and return initial greeting
+    if not message:
+        InterviewEngine.apply_auto_calculations(state)
+        readiness = InterviewEngine.evaluate_readiness(state)
+        next_interaction = InterviewEngine.plan_next_interaction(state)
+        try:
+            preview_html = generate_preview_html(state.to_flat_dict())
+        except Exception:
+            preview_html = ""
+
+        # Determine template label for a context-aware greeting
+        is_leave_license = "leave" in agreement_type.lower() or "license" in agreement_type.lower()
+        template_label = "Leave & License Agreement" if is_leave_license else "Rent Agreement"
+
+        # If the user has an existing draft with real values, use a resuming message
+        has_existing_fields = any(
+            bool(entry.value and str(entry.value).strip())
+            for entry in state.fields.values()
+        )
+        if has_existing_fields:
+            init_message = (
+                f"👋 **Welcome back!** I've restored your **{template_label}** draft.\n\n"
+                "You can continue where you left off — just tell me anything that needs to be added or updated."
+            )
+        else:
+            # Fresh start: Fast-track onboarding
+            init_message = (
+                f"👋 **Let's create your {template_label}!**\n\n"
+                "I just need a few details from you — no forms to fill."
+            )
+            # Override chips with role selection
+            next_interaction = {
+                "type": "role_selection",
+                "focus_area": "onboarding",
+                "target_fields": [],
+                "question_text": "",
+                "suggestion_chips": [
+                    {"label": "🏠 I'm the Owner", "action": "set_role", "value": "I am the Owner / Landlord"},
+                    {"label": "👤 I'm the Tenant", "action": "set_role", "value": "I am the Tenant"},
+                    {"label": "🏢 I'm a Broker / Agent", "action": "set_role", "value": "I am a Broker or Agent helping both parties"},
+                ],
+            }
+
+        return jsonify({
+            "success": True,
+            "assistant_message": init_message,
+            "next_interaction": next_interaction,
+            "readiness": readiness,
+            "newly_extracted_keys": [],
+            "calculated_keys": [],
+            "agreement_state": state.to_client_payload(),
+            "preview_html": preview_html,
+        })
+
+    result = ai_service.understand_and_extract(message, state)
+    return jsonify(result)
+
+
+@app.route('/api/ai/confirm-field', methods=['POST'])
+@limiter.limit("120 per minute")
+def api_ai_confirm_field():
+    """Confirms one or all extracted fields in the agreement state."""
+    data = request.json or {}
+    client_state = data.get('agreement_state') or {}
+    field_key = data.get('field_key')
+    bulk = data.get('bulk', False)
+
+    state = AgreementState.from_client_payload(client_state) if client_state.get('fields') else AgreementState.from_flat_dict(client_state)
+
+    if bulk:
+        state.bulk_confirm()
+    elif field_key:
+        state.confirm_field(field_key)
+
+    InterviewEngine.apply_auto_calculations(state)
+    readiness = InterviewEngine.evaluate_readiness(state)
+    next_interaction = InterviewEngine.plan_next_interaction(state)
+    try:
+        preview_html = generate_preview_html(state.to_flat_dict())
+    except Exception:
+        preview_html = ""
+
+    return jsonify({
+        "success": True,
+        "agreement_state": state.to_client_payload(),
+        "readiness": readiness,
+        "next_interaction": next_interaction,
+        "preview_html": preview_html,
+    })
+
+
 @app.route('/api/ai/review-chat', methods=['POST'])
 @limiter.limit("20 per minute")
 def api_ai_review_chat():
@@ -276,23 +445,32 @@ def api_ai_review_chat():
 @app.route('/api/ocr/aadhaar', methods=['POST'])
 @limiter.limit("10 per minute")
 def api_ocr_aadhaar():
-    """Upload Aadhaar card image and extract party fields via multimodal AI OCR."""
+    """Extract party fields from an Aadhaar image or PDF without retaining the source file."""
     if 'file' not in request.files or request.files['file'].filename == '':
-        # Return demo/mock result when no file provided
-        ocr_result = ai_service.extract_aadhaar_ocr(b"", "image/jpeg")
-        return jsonify({"success": True, "extracted": ocr_result, "source": "demo_ocr"})
+        return jsonify({"success": False, "error": "Please select an Aadhaar image or PDF to extract."}), 400
 
     file        = request.files['file']
     filename    = secure_filename(file.filename)
+    extension   = os.path.splitext(filename)[1].lower()
+    if extension not in {'.jpg', '.jpeg', '.png', '.webp', '.pdf'}:
+        return jsonify({"success": False, "error": "Please upload a JPG, PNG, WEBP, or PDF Aadhaar document."}), 400
+
+    mime_type = file.mimetype or ('application/pdf' if extension == '.pdf' else 'image/jpeg')
     unique_name = f"{uuid.uuid4().hex}_{filename}"
     filepath    = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
-    file.save(filepath)
-
-    with open(filepath, 'rb') as f:
-        image_bytes = f.read()
-
-    extracted = ai_service.extract_aadhaar_ocr(image_bytes, file.mimetype or "image/jpeg")
-    return jsonify({"success": True, "file_name": filename, "extracted": extracted})
+    try:
+        file.save(filepath)
+        with open(filepath, 'rb') as f:
+            document_bytes = f.read()
+        try:
+            extracted = ai_service.extract_aadhaar_ocr(document_bytes, mime_type)
+        except AadhaarOcrError as error:
+            return jsonify({"success": False, "error": str(error)}), 422
+        return jsonify({"success": True, "file_name": filename, "extracted": extracted, "data": extracted})
+    finally:
+        # Aadhaar source files are highly sensitive: retain only reviewable extracted fields.
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -303,6 +481,34 @@ def api_ocr_aadhaar():
 @app.route('/api/mapping')
 def api_mapping():
     return jsonify({"mappings": []})
+
+
+@app.route('/api/places/autocomplete', methods=['GET'])
+def api_places_autocomplete():
+    """Returns autocomplete suggestions from Google Places API for address input."""
+    query = request.args.get('query', '').strip()
+    if not query or len(query) < 2:
+        return jsonify({"success": True, "suggestions": []})
+    
+    suggestions = places_service.autocomplete(query)
+    return jsonify({"success": True, "suggestions": suggestions})
+
+
+@app.route('/api/places/resolve', methods=['GET'])
+def api_places_resolve():
+    """Resolves a society name or place_id into a full structured postal address with PIN code."""
+    query = request.args.get('query', '').strip()
+    place_id = request.args.get('place_id', '').strip()
+    
+    result = None
+    if place_id:
+        result = places_service.get_place_details(place_id)
+    elif query:
+        result = places_service.search_and_resolve(query)
+        
+    if result:
+        return jsonify({"success": True, "place": result})
+    return jsonify({"success": False, "error": "Could not resolve place"}), 404
 
 
 @app.route('/api/propertymaster/societies')
@@ -501,6 +707,163 @@ def api_get_template():
     tname = f"{atype}_{tenant_type.upper()}_{lock}_O{owner_count}T{tenant_count}_v1.docx"
 
     return jsonify({"template_used": tname})
+
+
+@app.route('/api/rental/download-docx', methods=['POST'])
+def api_rental_download_docx():
+    """Create a DOCX, archive it by property, and return it as a download."""
+    data = request.get_json(silent=True) or {}
+
+    def path_part(value, fallback):
+        safe_value = secure_filename(str(value or '').strip())
+        return safe_value or fallback
+
+    society = path_part(data.get('society_name'), 'Unknown_Society')
+    block = path_part(data.get('property_block'), 'Unknown_Block')
+    flat = path_part(data.get('property_no'), 'Unknown_Flat')
+    property_folder = f'{block}_{flat}'
+    generated_root = os.path.join(app.root_path, 'agreements', society, property_folder)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'Rental_Agreement_{flat}_{block}_{society}_{timestamp}.docx'
+    output_path = os.path.join(generated_root, filename)
+
+    try:
+        generate_docx(data, output_path=output_path)
+    except Exception:
+        logger.exception('DOCX generation failed')
+        return jsonify({'success': False, 'error': 'Unable to generate the DOCX document.'}), 500
+
+    return send_file(
+        output_path,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+
+
+@app.route('/api/rental/download-pdf', methods=['POST'])
+@app.route('/api/rental/generate-pdf', methods=['POST'])
+def api_rental_download_pdf():
+    """Create a PDF document, archive it by property, and return it for direct browser download."""
+    data = request.get_json(silent=True) or {}
+
+    def path_part(value, fallback):
+        safe_value = secure_filename(str(value or '').strip())
+        return safe_value or fallback
+
+    society = path_part(data.get('society_name'), 'Unknown_Society')
+    block = path_part(data.get('property_block'), 'Unknown_Block')
+    flat = path_part(data.get('property_no'), 'Unknown_Flat')
+    property_folder = f'{block}_{flat}'
+    generated_root = os.path.join(app.root_path, 'agreements', society, property_folder)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'Rental_Agreement_{flat}_{block}_{society}_{timestamp}.pdf'
+    output_path = os.path.join(generated_root, filename)
+
+    try:
+        generate_pdf(data, output_path=output_path)
+    except Exception as e:
+        logger.exception(f'PDF generation failed: {e}')
+        return jsonify({'success': False, 'error': f'Unable to generate the PDF document: {str(e)}'}), 500
+
+    return send_file(
+        output_path,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf',
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Leegality Digital Signature (Aadhaar / OTP eSign) Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/rental/request-esign', methods=['POST'])
+@app.route('/api/esign/request', methods=['POST'])
+def api_rental_request_esign():
+    """
+    Generate the agreement PDF and dispatch digital eSign invitations
+    via Leegality Sandbox/Production API.
+    """
+    data = request.get_json(silent=True) or {}
+    irn = data.get('agreement_number') or data.get('irn')
+
+    try:
+        custom_invitees = data.get('custom_invitees') or data.get('invitees')
+        result = leegality_service.initiate_esign(data, custom_invitees=custom_invitees, irn=irn)
+        
+        # If agreement exists in DB, update status
+        agreement_id = data.get('agreement_id')
+        if agreement_id:
+            try:
+                execute_db(
+                    "UPDATE agreement.agr_agreements SET status = 'ESIGN_SENT', custom_clauses = jsonb_set(COALESCE(custom_clauses, '{}'::jsonb), '{leegality_doc_id}', %s) WHERE id = %s",
+                    [json.dumps(result.get('document_id')), agreement_id]
+                )
+            except Exception as dbe:
+                logger.warning(f"DB update notice on eSign dispatch: {dbe}")
+
+        return jsonify(result)
+    except LeegalityError as e:
+        logger.warning(f"Leegality service rejected request: {e.message}")
+        return jsonify({"success": False, "error": e.message, "details": e.details}), e.status_code
+    except Exception as e:
+        logger.exception("Unexpected error in request-esign endpoint")
+        return jsonify({"success": False, "error": f"Failed to initiate eSign: {str(e)}"}), 500
+
+
+@app.route('/api/rental/esign-status/<document_id>', methods=['GET'])
+@app.route('/api/esign/status/<document_id>', methods=['GET'])
+def api_rental_esign_status(document_id):
+    """
+    Query real-time document signing status and invitee progress.
+    """
+    include_file = request.args.get('file', 'false').lower() in ('1', 'true', 'yes')
+    include_audit = request.args.get('audit', 'false').lower() in ('1', 'true', 'yes')
+
+    try:
+        details = leegality_service.get_document_details(
+            document_id,
+            include_file=include_file,
+            include_audit=include_audit
+        )
+        return jsonify(details)
+    except LeegalityError as e:
+        return jsonify({"success": False, "error": e.message, "details": e.details}), e.status_code
+    except Exception as e:
+        logger.exception(f"Error fetching status for Leegality document {document_id}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/leegality/webhook', methods=['POST'])
+def api_leegality_webhook():
+    """
+    Incoming webhook handler for Leegality eSign events.
+    Verifies HMAC MAC header with Private Salt.
+    """
+    mac_header = request.headers.get('X-Leegality-Mac') or request.headers.get('Mac') or ''
+    raw_data = request.get_data()
+
+    if not leegality_service.verify_webhook_mac(raw_data, mac_header):
+        logger.warning("Rejected Leegality webhook due to invalid MAC signature")
+        return jsonify({"success": False, "error": "Invalid MAC signature"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    doc_id = payload.get('documentId')
+    status = payload.get('status')
+    logger.info(f"Received verified Leegality webhook for document {doc_id} with status: {status}")
+
+    # Optionally persist status update to database
+    if doc_id and status:
+        try:
+            execute_db(
+                "UPDATE agreement.agr_agreements SET status = %s WHERE custom_clauses->>'leegality_doc_id' = %s",
+                [status, doc_id]
+            )
+        except Exception as dbe:
+            logger.warning(f"DB update on webhook notice: {dbe}")
+
+    return jsonify({"success": True, "message": "Webhook processed successfully"})
 
 
 # ─────────────────────────────────────────────────────────────────────────────

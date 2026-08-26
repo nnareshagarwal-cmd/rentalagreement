@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agreement Studio | AgreementAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="/static/css/main.css?v={{ static_v }}">
+  <link rel="stylesheet" href="/static/css/safekeys-ui.css?v={{ static_v }}">
+  <link rel="stylesheet" href="/static/css/ai_creator_studio.css?v={{ static_v }}">
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" defer></script>
+</head>
+<body class="ai-studio-body">
+
+  <!-- Hidden File Input for in-chat Aadhaar / ID upload -->
+  <input type="file" id="inChatAadhaarInput" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none;" onchange="handleInChatAadhaarUpload(this)">
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- TOP NAVIGATION BAR                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <header class="studio-navbar">
+    <a href="/" class="studio-brand">
+      <span>Agreement<span style="color:var(--studio-accent-purple)">AI</span></span>
+      <span class="studio-brand-badge">✨ AI Studio</span>
+    </a>
+
+    <div class="studio-nav-center">
+      <div class="studio-template-pill" id="templatePill">
+        <i data-lucide="file-text" style="width:14px;height:14px;color:var(--studio-accent-purple);"></i>
+        <span id="templatePillText">Rent Agreement</span>
+      </div>
+    </div>
+
+    <div class="studio-nav-actions">
+      <button type="button" class="studio-btn studio-btn-secondary" onclick="toggleFormDrawer()" title="Open structured control panel">
+        <i data-lucide="sliders-horizontal" style="width:14px;height:14px;"></i> Review / Edit Form
+      </button>
+      <button type="button" class="studio-btn studio-btn-secondary" onclick="saveAgreementDraft()" title="Save progress">
+        <i data-lucide="save" style="width:14px;height:14px;"></i> Save
+      </button>
+      <button type="button" class="studio-btn studio-btn-secondary" id="startFreshBtn" onclick="clearDraftAndRestart()" title="Clear all data and start a new agreement from scratch" style="color:#f87171; border-color:rgba(248,113,113,0.3);">
+        <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Start Fresh
+      </button>
+      <button type="button" class="studio-btn studio-btn-primary" id="generateDocxBtn" onclick="triggerDocxDownload()" disabled title="Download final agreement">
+        <i data-lucide="download" style="width:14px;height:14px;"></i> Download Word / PDF
+      </button>
+      <button type="button" class="studio-btn studio-btn-primary sk-btn-esign" id="studioEsignBtn" onclick="triggerStudioEsign()" title="Digital eSign via Leegality Sandbox">
+        <i data-lucide="pen-tool" style="width:14px;height:14px;"></i> Digital eSign
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MAIN SPLIT-SCREEN WORKSPACE GRID                               -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <main class="studio-main-grid">
+
+    <!-- LEFT: Conversational AI Agreement Interviewer -->
+    <section class="studio-chat-panel">
+      
+      <!-- Messages Feed -->
+      <div class="studio-chat-messages" id="studioChatMessages">
+        <div class="chat-msg assistant" id="initWelcomeBubble">
+          <div class="chat-avatar">🤖</div>
+          <div class="chat-bubble" style="color:var(--studio-text-muted); font-style:italic;">
+            ⚡ Setting up your agreement workspace...
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Suggestion Chips Container -->
+      <div class="studio-chips-container" id="studioChipsContainer"></div>
+
+      <!-- Input Bar -->
+      <div class="studio-input-bar" style="position:relative;">
+        <!-- Address Autocomplete Floating Dropdown -->
+        <div id="addressAutocompleteDropdown" class="address-autocomplete-dropdown" style="display:none;"></div>
+
+        <div class="studio-input-box">
+          <button type="button" class="studio-attach-btn" onclick="document.getElementById('inChatAadhaarInput').click()" title="Upload Aadhaar / ID document">
+            <i data-lucide="paperclip" style="width:16px;height:16px;"></i>
+          </button>
+          <button type="button" class="studio-attach-btn studio-calendar-btn" id="studioCalendarBtn" onclick="triggerStudioDatePicker()" title="Pick agreement date from calendar">
+            <i data-lucide="calendar" style="width:16px;height:16px;"></i>
+          </button>
+          <input type="date" id="studioDatePickerInput" style="position:absolute; opacity:0; pointer-events:none; width:0; height:0;" onchange="handleStudioDateSelected(this)" />
+          <textarea id="studioChatInput" class="studio-textarea" rows="1" placeholder="Type rental details, paste message, or ask AI..." onkeydown="handleChatInputKey(event)"></textarea>
+          <button type="button" class="studio-send-btn" id="studioSendBtn" onclick="sendUserMessage()" title="Send">
+            <i data-lucide="arrow-up" style="width:18px;height:18px;"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Agreement Details Board & Live Document Preview -->
+    <section class="studio-details-panel">
+      
+      <!-- Tab Header -->
+      <div class="studio-panel-tabs">
+        <div class="studio-tab-group">
+          <button type="button" class="studio-tab-btn active" id="tabSummaryBtn" onclick="switchStudioTab('summary')">
+            <i data-lucide="layout-dashboard" style="width:14px;height:14px;"></i> Agreement Details & Readiness
+          </button>
+          <button type="button" class="studio-tab-btn" id="tabPreviewBtn" onclick="switchStudioTab('preview')">
+            <i data-lucide="file-text" style="width:14px;height:14px;"></i> Full Legal Preview
+          </button>
+        </div>
+        <div style="font-size:12px; color:var(--studio-text-dim);" id="autoSaveIndicator">
+          Draft auto-saved
+        </div>
+      </div>
+
+      <!-- Tab 1: Agreement Details & Readiness View -->
+      <div class="studio-tab-content active" id="studioSummaryTab">
+        
+        <!-- Readiness Banner -->
+        <div class="readiness-banner" id="readinessBanner">
+          <div class="readiness-info">
+            <h3 id="readinessHeadline">Setting up agreement...</h3>
+            <p id="readinessSubtext">Describe your rental terms on the left to begin.</p>
+          </div>
+          <div class="readiness-badge pending" id="readinessBadge">
+            <span id="readinessBadgeText">0 Required Items</span>
+          </div>
+        </div>
+
+        <!-- Required Fields Status Section -->
+        <div>
+          <div class="details-section-title">Required Details</div>
+          <div class="summary-cards-grid" id="requiredCardsGrid"></div>
+        </div>
+
+        <!-- Recommended & Optional Terms Section -->
+        <div>
+          <div class="details-section-title">Recommended Legal Terms</div>
+          <div class="summary-cards-grid" id="recommendedCardsGrid"></div>
+        </div>
+
+      </div>
+
+      <!-- Tab 2: Full Legal Document Live Preview View -->
+      <div class="studio-tab-content" id="studioPreviewTab" style="background:#090d16; padding:18px;">
+        <div class="studio-preview-wrapper" id="studioPreviewContent">
+          <em>Start entering agreement details on the left to generate the legal document preview...</em>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Hidden File Upload Inputs -->
+  <input type="file" id="ownerAadhaarInput" accept="image/*,application/pdf" style="display:none;" onchange="handleKickstartFileInput(event, 'owner')">
+  <input type="file" id="tenantAadhaarInput" accept="image/*,application/pdf" style="display:none;" onchange="handleKickstartFileInput(event, 'tenant')">
+  <input type="file" id="inChatAadhaarInput" accept="image/*,application/pdf" style="display:none;" onchange="handleInChatAadhaarSelected(event)">
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SLIDE-OUT CONTROL PANEL DRAWER (Classic Form Inspector)         -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="studio-drawer-backdrop" id="studioDrawerBackdrop" onclick="toggleFormDrawer()"></div>
+  <aside class="studio-drawer" id="studioDrawer">
+    <div class="studio-drawer-head">
+      <div>
+        <h3 style="font-size:16px; font-weight:700; color:#f1f5f9;">Structured Agreement Form</h3>
+        <span style="font-size:12px; color:var(--studio-text-muted);">Directly edit raw values with two-way sync</span>
+      </div>
+      <button type="button" class="studio-btn studio-btn-secondary" onclick="toggleFormDrawer()">✕</button>
+    </div>
+    <div class="studio-drawer-body" id="drawerFormFields">
+      <!-- Dynamically hydrated from field_registry -->
+    </div>
+    <div style="padding:16px 24px; border-top:1px solid var(--studio-card-border); background:rgba(0,0,0,0.2); display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="studio-btn studio-btn-primary" onclick="toggleFormDrawer()">Apply & Close</button>
+    </div>
+  </aside>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="/static/js/safekeys_esign.js?v={{ static_v }}"></script>
+  <script src="/static/js/ai_creator_studio.js?v={{ static_v }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

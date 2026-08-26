@@ -163,6 +163,10 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("society_name",     "Society Name / Project",  "🏢", "text",     "property",
            "{society_name}",   "property", required=False),
 
+    _field("property_city",    "City",                    "🏙️", "text",     "property",
+           "{property_city}",  "property", required=False,
+           hint="City where the property is located (e.g., Hyderabad, Bangalore, Mumbai)"),
+
     _field("property_address", "Rental Property Address", "📍", "textarea", "property",
            "{property_address}", "property", wide=True, rows=3,
            hint="Full address of the rental property"),
@@ -226,7 +230,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
            "{owner1_occupation}", "owner", options=_OCCUPATION_OPTIONS),
 
     _field("owner1_address",     "Owner Permanent Address",       "🏠", "textarea","owner_1",
-           "{owner1_address}",    "owner", wide=True, rows=3),
+           "{owner1_address}",    "owner", wide=False, rows=2),
 
     _field("owner1_email",       "Owner Email",                   "📧", "text",    "owner_1",
            "{owner1_email}",      "owner", required=False),
@@ -256,7 +260,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
            options=_OCCUPATION_OPTIONS, party_index=2),
 
     _field("owner2_address",     "Owner 2 Permanent Address",     "🏠", "textarea","owner_2",
-           "{owner2_address}",    "owner", wide=True, rows=3, party_index=2),
+           "{owner2_address}",    "owner", wide=False, rows=2, party_index=2),
 
     _field("owner2_email",       "Owner 2 Email",                 "📧", "text",    "owner_2",
            "{owner2_email}",      "owner", required=False, party_index=2),
@@ -278,7 +282,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("owner3_occupation", "Owner 3 Occupation",             "💼", "select",  "owner_3",
            "{owner3_occupation}","owner", options=_OCCUPATION_OPTIONS, party_index=3),
     _field("owner3_address",    "Owner 3 Permanent Address",      "🏠", "textarea","owner_3",
-           "{owner3_address}",   "owner", wide=True, rows=3, party_index=3),
+           "{owner3_address}",   "owner", wide=False, rows=2, party_index=3),
 
     # ── OWNER 4 ──────────────────────────────────────────────────────────────
     _field("owner4_prefix",     "Owner 4 Name Prefix",            "👤", "select",  "owner_4",
@@ -294,7 +298,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("owner4_occupation", "Owner 4 Occupation",             "💼", "select",  "owner_4",
            "{owner4_occupation}","owner", options=_OCCUPATION_OPTIONS, party_index=4),
     _field("owner4_address",    "Owner 4 Permanent Address",      "🏠", "textarea","owner_4",
-           "{owner4_address}",   "owner", wide=True, rows=3, party_index=4),
+           "{owner4_address}",   "owner", wide=False, rows=2, party_index=4),
 
     # ── OWNER 5 ──────────────────────────────────────────────────────────────
     _field("owner5_prefix",     "Owner 5 Name Prefix",            "👤", "select",  "owner_5",
@@ -310,7 +314,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("owner5_occupation", "Owner 5 Occupation",             "💼", "select",  "owner_5",
            "{owner5_occupation}","owner", options=_OCCUPATION_OPTIONS, party_index=5),
     _field("owner5_address",    "Owner 5 Permanent Address",      "🏠", "textarea","owner_5",
-           "{owner5_address}",   "owner", wide=True, rows=3, party_index=5),
+           "{owner5_address}",   "owner", wide=False, rows=2, party_index=5),
 
     # ── OWNER 6 ──────────────────────────────────────────────────────────────
     _field("owner6_prefix",     "Owner 6 Name Prefix",            "👤", "select",  "owner_6",
@@ -326,7 +330,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("owner6_occupation", "Owner 6 Occupation",             "💼", "select",  "owner_6",
            "{owner6_occupation}","owner", options=_OCCUPATION_OPTIONS, party_index=6),
     _field("owner6_address",    "Owner 6 Permanent Address",      "🏠", "textarea","owner_6",
-           "{owner6_address}",   "owner", wide=True, rows=3, party_index=6),
+           "{owner6_address}",   "owner", wide=False, rows=2, party_index=6),
 
     # ── TENANT 1 ─────────────────────────────────────────────────────────────
     _field("tenant1_prefix",     "Tenant Name Prefix",             "👤", "select",  "tenant_1",
@@ -348,7 +352,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
            "{tenant1_occupation}","tenant", options=_OCCUPATION_OPTIONS),
 
     _field("tenant1_address",    "Tenant Permanent Address",       "🏠", "textarea","tenant_1",
-           "{tenant1_address}",   "tenant", wide=True, rows=3),
+           "{tenant1_address}",   "tenant", wide=False, rows=2),
 
     _field("tenant1_email",      "Tenant Email",                   "📧", "text",    "tenant_1",
            "{tenant1_email}",     "tenant", required=False),
@@ -370,7 +374,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("tenant2_occupation", "Tenant 2 Occupation",            "💼", "select",  "tenant_2",
            "{tenant2_occupation}","tenant", options=_OCCUPATION_OPTIONS, party_index=2),
     _field("tenant2_address",    "Tenant 2 Permanent Address",     "🏠", "textarea","tenant_2",
-           "{tenant2_address}",   "tenant", wide=True, rows=3, party_index=2),
+           "{tenant2_address}",   "tenant", wide=False, rows=2, party_index=2),
     _field("tenant2_email",      "Tenant 2 Email",                 "📧", "text",    "tenant_2",
            "{tenant2_email}",     "tenant", required=False, party_index=2),
     _field("tenant2_phone",      "Tenant 2 Phone",                 "📞", "text",    "tenant_2",
@@ -390,7 +394,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("tenant3_occupation", "Tenant 3 Occupation",            "💼", "select",  "tenant_3",
            "{tenant3_occupation}","tenant", options=_OCCUPATION_OPTIONS, party_index=3),
     _field("tenant3_address",    "Tenant 3 Permanent Address",     "🏠", "textarea","tenant_3",
-           "{tenant3_address}",   "tenant", wide=True, rows=3, party_index=3),
+           "{tenant3_address}",   "tenant", wide=False, rows=2, party_index=3),
 
     # ── TENANT 4 ─────────────────────────────────────────────────────────────
     _field("tenant4_prefix",     "Tenant 4 Name Prefix",           "👤", "select",  "tenant_4",
@@ -406,7 +410,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("tenant4_occupation", "Tenant 4 Occupation",            "💼", "select",  "tenant_4",
            "{tenant4_occupation}","tenant", options=_OCCUPATION_OPTIONS, party_index=4),
     _field("tenant4_address",    "Tenant 4 Permanent Address",     "🏠", "textarea","tenant_4",
-           "{tenant4_address}",   "tenant", wide=True, rows=3, party_index=4),
+           "{tenant4_address}",   "tenant", wide=False, rows=2, party_index=4),
 
     # ── TENANT 5 ─────────────────────────────────────────────────────────────
     _field("tenant5_prefix",     "Tenant 5 Name Prefix",           "👤", "select",  "tenant_5",
@@ -422,7 +426,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("tenant5_occupation", "Tenant 5 Occupation",            "💼", "select",  "tenant_5",
            "{tenant5_occupation}","tenant", options=_OCCUPATION_OPTIONS, party_index=5),
     _field("tenant5_address",    "Tenant 5 Permanent Address",     "🏠", "textarea","tenant_5",
-           "{tenant5_address}",   "tenant", wide=True, rows=3, party_index=5),
+           "{tenant5_address}",   "tenant", wide=False, rows=2, party_index=5),
 
     # ── TENANT 6 ─────────────────────────────────────────────────────────────
     _field("tenant6_prefix",     "Tenant 6 Name Prefix",           "👤", "select",  "tenant_6",
@@ -438,7 +442,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("tenant6_occupation", "Tenant 6 Occupation",            "💼", "select",  "tenant_6",
            "{tenant6_occupation}","tenant", options=_OCCUPATION_OPTIONS, party_index=6),
     _field("tenant6_address",    "Tenant 6 Permanent Address",     "🏠", "textarea","tenant_6",
-           "{tenant6_address}",   "tenant", wide=True, rows=3, party_index=6),
+           "{tenant6_address}",   "tenant", wide=False, rows=2, party_index=6),
 
     # ── BACHELOR FIELDS (visible only when tenant_type = Bachelor) ────────────
     _field("tenant_poc",     "Single Point of Contact (SPOC)",  "👤", "select_dynamic", "bachelor",

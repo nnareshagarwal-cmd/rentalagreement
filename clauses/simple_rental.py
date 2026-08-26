@@ -192,7 +192,7 @@ CLAUSES = [
     {
         "id": "clause_23",
         "title": "",
-        "text": 'Whereas the Owner let out the premises <Rental Property Address: P12>. To the Tenants for residential purpose on a monthly rent.',
+        "text": 'Whereas the {owner_word} let out the premises {property_address}. To the {tenant_word} for residential purpose on a monthly rent.',
         "locked": False,
         "condition": None
     },
@@ -204,9 +204,54 @@ CLAUSES = [
         "condition": None
     },
     {
+        "id": "hdr_financial",
+        "is_header": True,
+        "title": "",
+        "text": "FINANCIAL TERMS",
+        "locked": False,
+        "condition": None
+    },
+    {
         "id": "clause_25",
         "title": "",
-        "text": 'That the {tenant_word} shall pay the advance monthly rent of Rs. {monthly_rent} (Rupees {monthly_rent_words} Only) {maintenance} Maintenance promptly to the Owner on or before 5th of every English Calendar Month. {optional1}',
+        "text": 'That the {tenant_word} shall pay the advance monthly rent of Rs. {monthly_rent} ({monthly_rent_words}) {maintenance} Maintenance promptly to the {owner_word} on or before 5th of every English Calendar Month.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_30",
+        "title": "",
+        "text": 'Maintenance to be paid to the society or apartment complex directly by the {tenant_word}. The maintenance amount is subject to change during the term of the agreement as decided by the society association and {tenant_word} needs to pay the changed amount as directed by the society association.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_31",
+        "title": "",
+        "text": 'Water charges (if any) shall be borne by the {tenant_word} and will be charged extra, whether supplied through municipal connection or water tankers.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_35",
+        "title": "",
+        "text": 'The {tenant_word} shall bear the Electricity, Maintenance, Water, Gas, Utility, Power Backup, Clubhouse, Society Move in, Move out Charges if any.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_45",
+        "title": "",
+        "text": 'The property tax on the schedule property will be paid by the {owner_word}.',
+        "locked": False,
+        "condition": None
+    },
+
+    {
+        "id": "hdr_tenure",
+        "is_header": True,
+        "title": "",
+        "text": "TENURE & RENEWAL",
         "locked": False,
         "condition": None
     },
@@ -218,107 +263,16 @@ CLAUSES = [
         "condition": None
     },
     {
-        "id": "clause_27",
-        "title": "",
-        "text": 'That the {tenant_word} has deposited an interest free amount of Rs. {security_deposit} (Rupees {security_deposit_words} Only) as advance to the Owner by way of online transfer and it is either refundable after 2 weeks of the time of expiry of the above said period of tenancy or deducting of adjustments if any.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_28",
-        "title": "",
-        "text": 'The {tenant_word} has to pay the rent during notice or move-out period and the Deposit amount cannot be adjusted towards monthly rent during notice period or move-out period.',
-        "locked": False,
-        "condition": None
-    },
-    {
         "id": "clause_29",
         "title": "",
-        "text": 'The Tenant has to stay for a minimum tenure of {lockin_months} Months from the {agreement_start_date} to {lockin_end_date}. In-case the Tenant moves out before {lockin_months} Months from the Agreement start date than {penalty_deduction} days of monthly rent would be deducted from the deposit.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_30",
-        "title": "",
-        "text": 'Maintenance to be paid to the society or apartment complex directly by the Tenants. The maintenance amount is subject to change during the term of the agreement as decided by the society association and Tenants needs to pay the changed amount as directed by the society association.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_31",
-        "title": "",
-        "text": 'Water charges shall be borne by the Tenants and will be charged extra, whether supplied through municipal connection or water tankers.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_32",
-        "title": "",
-        "text": 'If any roommate is leaving and new roommate is joining, please inform owner or his representative to draw a new lease and the charges of 2,500 has to be paid by new roommate for his verification, onboarding and agreement.',
-        "locked": False,
-        "condition": "tenant_type == 'bachelor'"
-    },
-    {
-        "id": "clause_33",
-        "title": "",
-        "text": 'Opposite Gender ({opp_gender}) are not allowed as roommates.',
-        "locked": False,
-        "condition": "tenant_type == 'bachelor'"
-    },
-    {
-        "id": "clause_34",
-        "title": "",
-        "text": 'The security deposit minus any cleaning, damage/repair or any outstanding charges (electricity, power backup charges, maintenance etc.) will be refunded back after 2 weeks after the Tenants hands over the keys.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_35",
-        "title": "",
-        "text": 'The Tenants shall bear the Electricity, Maintenance, Water, Gas, Utility, Power Backup, Clubhouse Charges if any.',
+        "text": 'The {tenant_word} has to stay for a minimum tenure of {lockin_months} Months from the {agreement_start_date} to {lockin_end_date}. In-case the {tenant_word} moves out before {lockin_months} Months from the Agreement start date than {penalty_deduction} days of monthly rent would be deducted from the deposit.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_36",
         "title": "",
-        "text": 'That the Owner / Tenants shall be entitled to terminate the lease/ agreement at any time during the initial or renewed terms of the lease/ agreement upon serving {notice_period} in writing of its intention to do so.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_37",
-        "title": "",
-        "text": 'The Tenants shall keep the premises in neat and tidy condition and shall bear all the damages caused if any.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_38",
-        "title": "",
-        "text": 'The Tenants shall not make material alternations in the above said premises during the term of lease without the consent of the Owner.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_39",
-        "title": "",
-        "text": 'The Tenants shall not use the premises for any commercial activity.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_40",
-        "title": "",
-        "text": 'The Tenants shall not sub-let the leases premises without the consent of the Owner in writing.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_41",
-        "title": "",
-        "text": 'That the Tenants shall permit the Owner or any of his agents or the representative to enter upon the said premises at all reasonable time for inspection and / or repair of the premises and fitting and fixtures and to examine the state and condition thereof.',
+        "text": 'That the {owner_word} / {tenant_word} shall be entitled to terminate the lease/ agreement at any time during the initial or renewed terms of the lease/ agreement upon serving {notice_period} in writing of its intention to do so, subject to other terms in this agreement.',
         "locked": False,
         "condition": None
     },
@@ -330,142 +284,206 @@ CLAUSES = [
         "condition": None
     },
     {
-        "id": "clause_43",
+        "id": "clause_32",
         "title": "",
-        "text": 'It is expressly understood that this Tenants does not create any tenancy or other vested interest in the property.',
+        "text": 'If any roommate is leaving and new roommate is joining, please inform {owner_word} or his representative to draw a new lease and the charges of 2,500 has to be paid by new roommate for his verification, onboarding and agreement.',
+        "locked": False,
+        "condition": "tenant_type == 'bachelor'"
+    },
+    {
+        "id": "clause_33",
+        "title": "",
+        "text": 'Opposite Gender ({opp_gender}) are not allowed as roommates.',
+        "locked": False,
+        "condition": "tenant_type == 'bachelor'"
+    },
+
+    {
+        "id": "hdr_deposit",
+        "is_header": True,
+        "title": "",
+        "text": "SECURITY DEPOSIT & SETTLEMENT",
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_44",
+        "id": "clause_27",
         "title": "",
-        "text": 'The Tenants shall not in the ordinary course resort to litigation and stop payment of monthly rent, due as per contractual obligation.',
+        "text": 'That the {tenant_word} has deposited an interest free amount of Rs. {security_deposit} ({security_deposit_words}) as advance to the {owner_word} by way of online transfer and it is refundable after 2 weeks of the time of expiry of the above said period of tenancy or deducting of adjustments if any.',
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_45",
+        "id": "clause_28",
         "title": "",
-        "text": 'The property tax on the schedule property will be paid by the Owner.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_46",
-        "title": "",
-        "text": 'That the Tenants shall not have any objection to allow further construction or development to be made by the Owner (Landlord) and construction thereof must be without disturbing or affecting the activities of his business.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_47",
-        "title": "",
-        "text": 'In case the Tenants fails to pay the rent for any 1 month or in the event of breach of any conditions covenants to be observed and performed by the Tenants hereunder, the lease/agreement may, at the option of the Owner, be terminated with immediate effect without prejudice to his right to cover all arrears of rent.',
+        "text": 'The {tenant_word} has to pay the rent during notice or move-out period and the Deposit amount cannot be adjusted towards monthly rent during notice period or move-out period.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_48",
         "title": "",
-        "text": 'The advanced is to be maintained with Owner till the Tenants is vacating for adjustment of society dues or any repairs/damages in the flat.',
+        "text": 'The advanced is to be maintained with {owner_word} till the {tenant_word} is vacating for adjustment of society dues or any repairs/damages in the flat.',
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_49",
+        "id": "clause_34",
         "title": "",
-        "text": 'That at the time of occupation, the Tenants shall see the sanity, electrical goods and appliances, Furniture, wood work and other fitting and fixture as per the Annexure-1 are in order and shall be responsible to restore them at the time of leaving the house premises in the same condition in which they have been taken over. Any of the above are found damaged while vacating the flat, repair charges to that extent will be deducted from the advance. ACs, Chimney if present in the flat needs to be serviced periodically by authorized service company by the Tenants directly with intimation to the Owners.',
+        "text": 'The security deposit minus any cleaning, damage/repair or any outstanding charges (electricity, power backup charges, maintenance etc.) will be refunded back after 2 weeks after the {tenant_word} hands over the keys.',
+        "locked": False,
+        "condition": None
+    },
+
+    {
+        "id": "hdr_use",
+        "is_header": True,
+        "title": "",
+        "text": "USE OF PREMISES",
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_50",
+        "id": "clause_37",
         "title": "",
-        "text": 'That the day-to-day minor repairs such as lights, Fans, Taps, showers, flush system, health faucets, cupboards hinges and channels shall be done by the Tenants at his own cost ensuring proper quality of repairs/replacement, but all other repairs of MAJOR NATURE such as leakage of Electricity, Pipes, Sewage, cracks etc., shall be done by the Owner at his own cost.',
+        "text": 'The {tenant_word} shall keep the premises in neat and tidy condition and shall bear all the damages caused if any.',
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_51",
+        "id": "clause_38",
         "title": "",
-        "text": 'That the Tenants should not put any nails on the walls. If it is required, Tenants needs to check with owner or his representative before making any such alteration. In case Owner or his representative agrees then Tenants need to revert back these changes during move out or vacating the premises.',
+        "text": 'The {tenant_word} shall not make material alternations in the above said premises during the term of lease without the consent of the {owner_word}.',
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_52",
+        "id": "clause_39",
         "title": "",
-        "text": 'Tenants needs to make sure there are no marks on walls and professionally cleaned in the same state while handing it back to Owner or his authorized representatives. If any marks are there, then Tenants needs to paint and handover Failure to this will result in deduction of the amount from the Deposit.',
+        "text": 'The {tenant_word} shall not use the premises for any commercial activity. The {tenant_word} shall not obtain GST registration or use the address of the premises for any business registration or commercial establishment without the prior written consent of the {owner_word}.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_40",
+        "title": "",
+        "text": 'The {tenant_word} shall not sub-let the leases premises without the consent of the {owner_word} in writing.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_53",
         "title": "",
-        "text": 'That the Tenants shall comply with all the rules and regulations of the society authorities whatsoever with relation to the said premises and pay maintenance charges regularly without fail as per the rules framed by the society.',
+        "text": 'That the {tenant_word} shall comply with all the rules and regulations of the society authorities whatsoever with relation to the said premises and pay maintenance charges regularly without fail as per the rules framed by the society.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_54",
         "title": "",
-        "text": 'That the Tenants shall not keep any hazardous or inflammable items / goods etc. in the said premises which is prohibited by the Law.',
+        "text": 'That the {tenant_word} shall not keep any hazardous or inflammable items / goods etc. in the said premises which is prohibited by the Law.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_55",
         "title": "",
-        "text": 'That the Tenants shall not carry out any anti-social activity prohibited under the prevailing Act of Law.',
+        "text": 'That the {tenant_word} shall not carry out any anti-social activity prohibited under the prevailing Act of Law.',
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_56",
+        "id": "clause_vacation",
         "title": "",
-        "text": 'All the furniture, electrical, electronic items are in working condition before move-in. It needs to be in the same state during move-out.',
+        "text": 'If the {tenant_word} remain away from the premises for an extended period, they shall take reasonable precautions to secure the premises and, where applicable, safely shut off gas, electrical and water connections before leaving.',
+        "locked": False,
+        "condition": None
+    },
+
+    {
+        "id": "hdr_repairs",
+        "is_header": True,
+        "title": "",
+        "text": "INSPECTION, INVENTORY & REPAIRS",
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_41",
+        "title": "",
+        "text": 'The {tenant_word} shall permit the {owner_word} or their authorized agents or representatives to enter the said premises at reasonable times for inspection, maintenance, repairs, or to examine the condition of the premises, fittings, and fixtures, provided that prior notice and approval from the {tenant_word} is obtained, except in the case of an emergency where immediate access is reasonably required to prevent damage to the premises or ensure the safety of persons or property.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_49",
+        "title": "",
+        "text": 'That at the time of occupation, the {tenant_word} shall see the sanitary, electrical goods, carpentry fixtures and appliances, Furniture, wood work and other fitting and fixture as per the Annexure are in order and shall be responsible to restore them at the time of leaving the house premises in the same condition in which they have been taken over. Any of the above are found damaged while vacating the flat, repair charges to that extent will be deducted from the advance. Any appliances, fixtures, or equipment provided with the premises, including but not limited to ACs, chimneys, geysers, and other installed appliances requiring periodic servicing or maintenance, shall be serviced by the {tenant_word} through an authorized service provider, with prior intimation to the {owner_word}.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_50",
+        "title": "",
+        "text": 'That the day-to-day minor repairs such as lights, fans, taps, showers, flush system, health faucets, cupboards hinges and channels shall be done by the {tenant_word} at his own cost ensuring proper quality of repairs/replacement, however, all major repairs such as electrical wiring faults, concealed plumbing pipes, seepage, structural cracks, and other major civil works shall be carried out by the {owner_word} at their own cost.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_57",
         "title": "",
-        "text": 'Any repair expenses for maintenance of furniture, electrical, electronic items and appliances which has happened due to external medium or human intervention or misuse of items, needs to accepted and fixed by Tenants.',
+        "text": 'Any damage to the furniture, electrical, electronic items, appliances, fittings, or fixtures caused due to misuse, negligence, improper handling, unauthorized repairs, or any act or omission of the {tenant_word} or their occupants or visitors shall be repaired or replaced by the {tenant_word} at their own cost.',
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_58",
+        "id": "clause_51",
         "title": "",
-        "text": 'Tenants has to get society main gate entrance and exit card issued on his cost. Owner shall facilitate in getting access cards to Tenants. Owner will not provide his/her access cards due to security reasons.',
+        "text": 'That the {tenant_word} should not put any nails on the walls. If it is required, {tenant_word} needs to check with {owner_word} or his representative before making any such alteration. In case {owner_word} or his representative agrees then {tenant_word} need to revert back these changes during move out or vacating the premises.',
         "locked": False,
         "condition": None
     },
     {
-        "id": "clause_59",
+        "id": "clause_52",
         "title": "",
-        "text": 'That the Tenants shall not be entitled to sublet the said premises to any other person/s or organization/s and shall use it exclusively only for residential purpose and cannot be used for any commercial purpose. Tenants cannot take any GST registration on this property.',
+        "text": '{tenant_word} needs to make sure there are no marks on walls and professionally cleaned in the same state while handing it back to {owner_word} or his authorized representatives. If any marks are there, then {tenant_word} needs to paint the property and handover. Failure to this will result in deduction of the amount from the Deposit.',
+        "locked": False,
+        "condition": None
+    },
+
+    {
+        "id": "hdr_breach",
+        "is_header": True,
+        "title": "",
+        "text": "DEFAULT & BREACH",
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_44",
+        "title": "",
+        "text": 'The {tenant_word} shall not in the ordinary course resort to litigation and stop payment of monthly rent, due as per contractual obligation.',
+        "locked": False,
+        "condition": None
+    },
+    {
+        "id": "clause_47",
+        "title": "",
+        "text": 'In case the {tenant_word} fails to pay the rent for any 1 month or in the event of breach of any conditions covenants to be observed and performed by the {tenant_word} hereunder, the lease/agreement may, at the option of the {owner_word}, be terminated with immediate effect without prejudice to his right to cover all arrears of rent.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_60",
         "title": "",
-        "text": 'The Tenants covenants with the Owner that all rights granted under this tenancy shall be subject to forfeiture in the event of any breach of its covenants, including but not limited to non-payment of monthly rent or unauthorized subletting of the premises or damage of property. In such cases, the Owner shall have the right to immediately resume possession of the premises, and the Lock-in Period clause shall stand null and void.',
-        "locked": False,
-        "condition": None
-    },
-    {
-        "id": "clause_61",
-        "title": "",
-        "text": 'The Tenants shall not use the address of the licensed premises for updating, registering, or linking any government identity or address records. In particular, the Licensee shall not use the premises address for address update in Aadhaar or the Indian Passport.',
+        "text": 'The {tenant_word} covenants with the {owner_word} that all rights granted under this tenancy shall be subject to forfeiture in the event of any breach of its covenants, including but not limited to non-payment of monthly rent or unauthorized subletting of the premises or damage of property. In such cases, the {owner_word} shall have the right to immediately resume possession of the premises, and the Lock-in Period clause shall stand null and void.',
         "locked": False,
         "condition": None
     },
     {
         "id": "clause_62",
         "title": "",
-        "text": 'All or any disputes arising out of or in connection with this agreement shall be subject to the jurisdiction of the courts in Hyderabad only.',
+        "text": 'All or any disputes arising out of or in connection with this agreement shall be subject to the jurisdiction of the courts in {property_city} only.',
         "locked": False,
         "condition": None
     },

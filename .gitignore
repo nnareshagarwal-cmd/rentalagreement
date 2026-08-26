@@ -8,6 +8,16 @@ __pycache__/
 *.sqlite3
 uploads/*
 !uploads/.gitkeep
+agreements/*
+!agreements/.gitkeep
+aadhar/
+scratch/
+*.bak*
+*.docx
+*.pdf
+*.mp4
 backups_20260725/
 .vscode/
 .idea/
+.venv/
+

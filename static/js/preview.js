@@ -21,7 +21,9 @@ export function buildFormDataPayload() {
     return data;
 }
 
-export async function refreshLivePreview() {
+import { syncPreviewToField } from './preview_sync.js';
+
+export async function refreshLivePreview(targetField = null) {
     const payload = buildFormDataPayload();
     try {
         const res = await fetch('/api/rental/preview', {
@@ -34,6 +36,12 @@ export async function refreshLivePreview() {
             const previewEl = document.getElementById('previewContent');
             if (previewEl && result.html) {
                 previewEl.innerHTML = result.html;
+
+                // Sync preview to active/target field after HTML update
+                const fieldToSync = targetField || document.activeElement;
+                if (fieldToSync && (fieldToSync.tagName === 'INPUT' || fieldToSync.tagName === 'TEXTAREA' || fieldToSync.tagName === 'SELECT')) {
+                    syncPreviewToField(fieldToSync);
+                }
             }
         }
     } catch (e) {
@@ -41,9 +49,9 @@ export async function refreshLivePreview() {
     }
 }
 
-export function triggerDebouncedPreview() {
+export function triggerDebouncedPreview(targetField = null) {
     clearTimeout(previewDebounceTimer);
-    previewDebounceTimer = setTimeout(refreshLivePreview, 300);
+    previewDebounceTimer = setTimeout(() => refreshLivePreview(targetField), 300);
 }
 
 export function setupPreviewControls() {
@@ -64,6 +72,11 @@ export function setupPreviewControls() {
 
     const togglePreviewVisibility = () => {
         document.body.classList.toggle('preview-hidden');
+        const isHidden = document.body.classList.contains('preview-hidden');
+        document.body.dataset.userPreviewHidden = isHidden ? 'true' : 'false';
+        if (headerTogglePreviewBtn) {
+            headerTogglePreviewBtn.innerHTML = isHidden ? '<span>👁️</span> Preview' : '<span>✖</span> Hide Preview';
+        }
     };
 
     if (toggleHidePreviewBtn) {

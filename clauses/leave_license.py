@@ -9,7 +9,7 @@ CLAUSES = [
     {
         "id": "license_charges___compensation",
         "title": "LICENSE CHARGES / COMPENSATION",
-        "text": "The {licensee_word} shall pay advance license charges of an amount of Rs. {monthly_rent} (Rupees {monthly_rent_words} Only) per month {maintenance} Maintenance for the 11 months for the use of the said premises. {optional1}",
+        "text": "The {licensee_word} shall pay advance license charges of an amount of Rs. {monthly_rent} ({monthly_rent_words}) per month {maintenance} Maintenance for the 11 months for the use of the said premises.",
         "locked": True,
         "condition": None
     },
@@ -44,7 +44,7 @@ CLAUSES = [
     {
         "id": "security_deposit",
         "title": "SECURITY DEPOSIT",
-        "text": "For the grant of the {licensee_word} has paid on the execution of this agreement an amount of Rs. {security_deposit} (Rupees {security_deposit_words} Only) to the {licensor_word} as a refundable security deposit towards the grant of the license. The {licensor_word} admits and acknowledges the receipt of the said amount. No Interest is paid on the said security deposit. Security Deposit cannot be used to adjust LICENSE CHARGES / COMPENSATION at any point.",
+        "text": "For the grant of the {licensee_word} has paid on the execution of this agreement an amount of Rs. {security_deposit} ({security_deposit_words}) to the {licensor_word} as a refundable security deposit towards the grant of the license. The {licensor_word} admits and acknowledges the receipt of the said amount. No Interest is paid on the said security deposit. Security Deposit cannot be used to adjust LICENSE CHARGES / COMPENSATION at any point.",
         "locked": True,
         "condition": None
     },
@@ -317,7 +317,7 @@ CLAUSES = [
     {
         "id": "jurisdiction",
         "title": "JURISDICTION",
-        "text": "All or any disputes arising out of or in connection with this agreement shall be subject to the jurisdiction of the courts in Hyderabad only.",
+        "text": "All or any disputes arising out of or in connection with this agreement shall be subject to the jurisdiction of the courts in {property_city} only.",
         "locked": False,
         "condition": None
     },

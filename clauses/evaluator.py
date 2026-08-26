@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from field_registry import FIELD_REGISTRY
 from .formatters import (
     _safe_int, clean_text, combine_name_prefix_once, format_careof,
-    format_age, format_ordinal_date, format_rent_increase
+    format_age, format_ordinal_date, format_rent_increase, extract_city
 )
 
 _PKEY_TO_CANONICAL = {
@@ -202,6 +202,13 @@ def _build_field_map(data):
     pronoun_his   = "his/her"   if tenant_count > 1 else "his"
     pronoun_they  = "they"      if tenant_count > 1 else "he"
 
+    prop_addr = _resolve_value(data, "property_address") or ""
+    prop_city_input = _resolve_value(data, "property_city") or _resolve_value(data, "city")
+    if prop_city_input and str(prop_city_input).strip():
+        property_city = str(prop_city_input).strip().title()
+    else:
+        property_city = extract_city(prop_addr)
+
     field_map = {
         "{licensor_word}": licensor_word,
         "{licensee_word}": licensee_word,
@@ -209,6 +216,7 @@ def _build_field_map(data):
         "{tenant_word}":   tenant_word,
         "{pronoun_his}":   pronoun_his,
         "{pronoun_they}":  pronoun_they,
+        "{property_city}": property_city,
     }
 
     raw_increase   = _resolve_value(data, "increase_percent")
@@ -255,6 +263,36 @@ def _build_field_map(data):
             val = raw
 
         field_map[placeholder] = val
+
+    # Dynamically populate all owner1..6 and tenant1..6 fields into field_map
+    for party_type in ("owner", "tenant"):
+        for i in range(1, 7):
+            name_raw = _resolve_value(data, f"{party_type}{i}_name")
+            if name_raw:
+                pfx = _resolve_value(data, f"{party_type}{i}_prefix")
+                field_map[f"{{{party_type}{i}_name}}"] = combine_name_prefix_once(pfx, name_raw)
+            
+            age_raw = _resolve_value(data, f"{party_type}{i}_age")
+            if age_raw:
+                field_map[f"{{{party_type}{i}_age}}"] = format_age(age_raw)
+
+            careof_raw = _resolve_value(data, f"{party_type}{i}_careof")
+            if careof_raw:
+                pfx = _resolve_value(data, f"{party_type}{i}_prefix")
+                field_map[f"{{{party_type}{i}_careof}}"] = format_careof(pfx, careof_raw)
+
+            careofname_raw = _resolve_value(data, f"{party_type}{i}_careofname")
+            if careofname_raw:
+                c_pfx = _resolve_value(data, f"{party_type}{i}_careofname_prefix") or "Mr."
+                field_map[f"{{{party_type}{i}_careofname}}"] = combine_name_prefix_once(c_pfx, careofname_raw)
+
+            occ_raw = _resolve_value(data, f"{party_type}{i}_occupation")
+            if occ_raw:
+                field_map[f"{{{party_type}{i}_occupation}}"] = occ_raw
+
+            addr_raw = _resolve_value(data, f"{party_type}{i}_address")
+            if addr_raw:
+                field_map[f"{{{party_type}{i}_address}}"] = addr_raw.upper()
 
     return field_map
 

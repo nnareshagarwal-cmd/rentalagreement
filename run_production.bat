@@ -1,15 +1,15 @@
 @echo off
 REM ─────────────────────────────────────────────────────────────────────────
 REM run_production.bat — Start AgreementAI with Gunicorn (production mode)
-REM
-REM Workers:     4  (adjust to 2 × CPU cores)
-REM Worker type: gevent (async, handles 500 concurrent connections per worker)
-REM Timeout:     30s (AI endpoints can be slow; set higher if needed)
-REM Bind:        0.0.0.0:7000
-REM
-REM Total concurrent capacity: 4 workers × 500 connections = 2000 simultaneous
-REM DB pool per worker: 20 connections → 4 × 20 = 80 total Postgres connections
 REM ─────────────────────────────────────────────────────────────────────────
+cd /d "%~dp0"
+
+echo =========================================================
+echo              AgreementAI SaaS Platform (Production)      
+echo       Server starting on: http://0.0.0.0:7000            
+echo       Workspace Path:     %CD%
+echo =========================================================
+echo.
 
 set FLASK_DEBUG=False
 set FLASK_ENV=production

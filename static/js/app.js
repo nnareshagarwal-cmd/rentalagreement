@@ -1,7 +1,6 @@
 // AgreementAI JavaScript Client Engine
 
 let currentDraftData = null;
-let currentAadhaarData = null;
 
 // ═══════════════════════════════════════════
 // 0. HERO IMAGE SLIDER ENGINE
@@ -54,10 +53,32 @@ function stopAutoPlay() {
   }
 }
 
+// Auto-convert typed text to UPPERCASE for text inputs and textareas
+document.addEventListener('input', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+    if (e.target.id === 'annexure' || e.target.id === 'copilotInput' || e.target.classList.contains('prompt-input')) return; // Preserve normal casing on AI copilot prompt
+    const type = (e.target.type || 'text').toLowerCase();
+    if (['text', 'search', 'url', 'tel', 'email'].includes(type) || e.target.tagName === 'TEXTAREA') {
+      const start = e.target.selectionStart;
+      const end = e.target.selectionEnd;
+      const upperVal = e.target.value.toUpperCase();
+      if (e.target.value !== upperVal) {
+        e.target.value = upperVal;
+        if (start !== null && end !== null) {
+          try { e.target.setSelectionRange(start, end); } catch (err) {}
+        }
+      }
+    }
+  }
+});
+
 // Initialize slider and check initial route when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   initSlider();
   checkInitialRoute();
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
 });
 
 // 1. Theme Switcher (Dark / Light Mode)
@@ -69,7 +90,9 @@ document.getElementById('themeToggleBtn').addEventListener('click', () => {
   const icon = newTheme === 'dark' ? 'sun' : 'moon';
   const text = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
   document.getElementById('themeToggleBtn').innerHTML = `<i data-lucide="${icon}"></i> <span>${text}</span>`;
-  lucide.createIcons();
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
 });
 
 // 2. Set Prompt Helper
@@ -78,70 +101,7 @@ function setPrompt(text, agrType = 'simple_rental') {
   sendCopilotQuery(text);
 }
 
-// 3. Aadhaar OCR Modal & Upload Engine
-function openAadhaarModal() {
-  document.getElementById('aadhaarModal').style.display = 'flex';
-}
-
-function closeAadhaarModal() {
-  document.getElementById('aadhaarModal').style.display = 'none';
-}
-
-async function handleAadhaarUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const resBox = document.getElementById('ocrResultBox');
-  resBox.style.display = 'block';
-  resBox.innerHTML = `<p style="color:var(--accent-purple)">⚡ Processing Aadhaar Multimodal OCR with AI Vision...</p>`;
-
-  try {
-    const res = await fetch('/api/ocr/aadhaar', {
-      method: 'POST',
-      body: formData
-    });
-    const result = await res.json();
-
-    if (result.success && result.extracted) {
-      currentAadhaarData = result.extracted;
-      const ext = result.extracted;
-
-      document.getElementById('ocrResultBox').innerHTML = `
-        <h4 style="color:var(--accent-emerald); font-size:0.9rem; font-weight:700; margin-bottom:0.5rem;">
-          ✓ Aadhaar Details Extracted Successfully (${result.source === 'demo_ocr' ? 'Verified' : 'AI Extracted'})
-        </h4>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.85rem;">
-          <div><strong>Name:</strong> ${ext.full_name || 'Rahul Ramesh Sharma'}</div>
-          <div><strong>Aadhaar:</strong> ${ext.aadhaar_masked || 'XXXX-XXXX-8912'}</div>
-          <div><strong>DOB:</strong> ${ext.date_of_birth || '1992-08-15'}</div>
-          <div><strong>Gender:</strong> ${ext.gender || 'Male'}</div>
-          <div><strong>Relation:</strong> ${ext.relation_type || 'S/O'} ${ext.relation_name || 'Suresh Sharma'}</div>
-          <div><strong>Pincode:</strong> ${ext.pincode || '560102'}</div>
-          <div style="grid-column: span 2;"><strong>Address:</strong> ${ext.address_line1 || ''}, ${ext.locality || ''}, ${ext.city || ''}, ${ext.state || ''}</div>
-        </div>
-      `;
-    }
-  } catch (err) {
-    console.error("Aadhaar OCR upload error:", err);
-    resBox.innerHTML = `<p style="color:red">Failed to extract Aadhaar card. Please try again.</p>`;
-  }
-}
-
-function applyAadhaarDataToForm() {
-  if (currentAadhaarData) {
-    document.getElementById('studioTenantName').value = currentAadhaarData.full_name;
-    document.getElementById('studioTenantFather').value = currentAadhaarData.relation_name || 'Suresh Sharma';
-    document.getElementById('studioTenantAddress').value = `${currentAadhaarData.address_line1}, ${currentAadhaarData.locality}, ${currentAadhaarData.city} - ${currentAadhaarData.pincode}`;
-  }
-  closeAadhaarModal();
-  openStudioModal();
-  updateLivePreview();
-}
-
-// 4. Studio Modal, URL Routing & Live Preview Engine using Clauses Renderer
+// 3. Studio Modal, URL Routing & Live Preview Engine using Clauses Renderer
 function updateUrlForAgreement(agrType, pushState = true) {
   const urlSlug = agrType === 'leave_license' ? 'leave-and-license' : 'simple-rental';
   const targetPath = `/agreements/${urlSlug}`;
@@ -345,16 +305,21 @@ async function sendCopilotQuery(promptOverride) {
     if (result.success && result.data) {
       const data = result.data;
       const aiMsgDiv = document.createElement('div');
+      const responseText = data.response || 'Action completed.';
+      const formattedText = responseText
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
       
       if (data.action === 'modify') {
-        aiMsgDiv.style.cssText = "background:rgba(16,185,129,0.12); border:1px solid var(--accent-emerald); padding:0.75rem; border-radius:8px; color:var(--text-primary);";
-        aiMsgDiv.innerHTML = `<strong>🤖 AI Copilot (Clause Updated):</strong><br>${data.response}`;
+        aiMsgDiv.style.cssText = "background:rgba(16,185,129,0.12); border:1px solid var(--accent-emerald); padding:0.75rem; border-radius:8px; color:var(--text-primary); line-height:1.5;";
+        aiMsgDiv.innerHTML = `<strong>🤖 AI Copilot (Clause Updated):</strong><br>${formattedText}`;
         if (data.updated_html) {
           document.getElementById('studioPreviewPane').innerHTML = data.updated_html;
         }
       } else {
-        aiMsgDiv.style.cssText = "background:rgba(6,182,212,0.12); border:1px solid var(--accent-cyan); padding:0.75rem; border-radius:8px; color:var(--text-primary);";
-        aiMsgDiv.innerHTML = `<strong>🤖 AI Copilot Review:</strong><br>${data.response}`;
+        aiMsgDiv.style.cssText = "background:rgba(6,182,212,0.12); border:1px solid var(--accent-cyan); padding:0.75rem; border-radius:8px; color:var(--text-primary); line-height:1.5;";
+        aiMsgDiv.innerHTML = `<strong>🤖 AI Copilot Review:</strong><br>${formattedText}`;
       }
       
       chatBox.appendChild(aiMsgDiv);
@@ -391,8 +356,12 @@ async function saveToDatabase() {
   }
 }
 
-function downloadAgreementPDF() {
-  window.print();
+function downloadAgreementPDF(btnElement) {
+  if (typeof window.triggerPdfDownload === 'function') {
+    window.triggerPdfDownload(btnElement);
+  } else {
+    alert('PDF download system is initialising. Please try again.');
+  }
 }
 
 // 7. Stamp Duty Lookup API

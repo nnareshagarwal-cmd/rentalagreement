@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/static/favicons/ra_blue.png?v=20260725_1">
-    <title>Rental Agreement Form</title>
+    <title>{{ agreement_title or 'Rental Agreement Form' }}</title>
     
     {% set sk_bundle = 'legacy' %}
 {% include '_static_assets.html' %}
@@ -13,19 +13,21 @@
 </head>
 <body class="sk-legacy">
     <div class="container">
-        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
-            <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                <span>🏠</span> Rental Agreement Form
-            </h1>
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <div id="userAuthBadge"></div>
-                <button type="button" id="headerTogglePreviewBtn" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); transition: all 0.2s ease;">
-                    <span>👁️</span> Toggle Document Preview
-                </button>
-                <a href="/" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; text-decoration: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); transition: all 0.2s ease;">
-                    <span>🏠</span> Home
-                </a>
+        <div class="sticky-workspace-header" id="stickyWorkspaceHeader">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; margin-bottom: 12px;">
+                <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                    <span>🏠</span> <span id="formHeaderTitleText">{{ agreement_title or 'Rental Agreement Form' }}</span>
+                </h1>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="headerTogglePreviewBtn" style="display: inline-flex; align-items: center; gap: 6px; background: #2563eb; color: white; border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 150ms ease;">
+                        <span>✖</span> Hide Preview
+                    </button>
+                    <a href="/" style="display: inline-flex; align-items: center; gap: 6px; background: transparent; color: #64748b; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 150ms ease;">
+                        <span>🏠</span> Home
+                    </a>
+                </div>
             </div>
+            <div id="skWizardStepper" class="sk-wizard-stepper"></div>
         </div>
         <div class="form-content" id="formContent">
             <form id="agreementForm">
@@ -36,9 +38,9 @@
 
                 <div class="button-group">
                     <button type="button" id="saveBtn" class="save-btn">💾 Save</button>
-                    <button type="button" id="generateBtn" class="generate-btn">📄 Generate Document</button>
-                    <button type="button" id="downloadDocBtn" class="download-doc-btn">⬇️ Download Document</button>
+                    <button type="button" id="generateBtn" class="generate-btn">📄 Generate & Download Document</button>
                     <button type="button" id="generatePdfBtn" class="generate-pdf-btn">📕 Generate PDF</button>
+                    <button type="button" id="requestEsignBtn" class="sk-btn sk-btn-esign">⚡ Digital eSign (Aadhaar / OTP)</button>
                 </div>
             </form>
 
@@ -70,15 +72,35 @@
     </div>
 
     <div id="previewPane">
-        <div class="preview-header-bar" style="position: sticky; top: -25px; background: white; z-index: 100; margin-top: -25px; padding-top: 15px; padding-bottom: 12px; margin-bottom: 15px; border-bottom: 2px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; font-family: 'Segoe UI', sans-serif;">
+        <div class="preview-header-bar" style="position: sticky; top: -25px; background: #ffffff; z-index: 100; margin-top: -25px; padding: 12px 16px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); font-family: var(--sk-font-sans, system-ui, -apple-system, sans-serif);">
+            <!-- Left: Title + Live Badge -->
             <div style="display: flex; align-items: center; gap: 10px;">
-                <button type="button" id="toggleExpandPreviewBtn" title="Expand Preview / Compress Form" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: transform 0.15s ease;">
-                    <span id="expandIcon" style="font-size: 14px;">◀</span> <span id="expandText">Expand Document</span>
-                </button>
-                <h2 style="font-size: 18px; font-weight: 700; color: #2d3748; margin: 0;">📄 Document Live Preview</h2>
+                <h2 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0; letter-spacing: -0.01em;">Live Agreement Preview</h2>
+                <span style="display: inline-flex; align-items: center; gap: 5px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 12px; padding: 2px 8px; font-size: 11px; font-weight: 700;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background-color: #10b981; box-shadow: 0 0 4px rgba(16,185,129,0.6);"></span>
+                    Live
+                </span>
             </div>
-            <button type="button" id="toggleHidePreviewBtn" style="background: #edf2f7; color: #4a5568; border: 1px solid #cbd5e0; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 12px;">
-                ✖ Hide Preview
+            
+            <!-- Right: Actions Cluster -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" id="toggleExpandPreviewBtn" title="Expand Preview / Compress Form" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 6px; transition: all 150ms ease;">
+                    <span id="expandIcon" style="font-size: 12px;">◀</span> <span id="expandText">Expand Document</span>
+                </button>
+                <button type="button" id="toggleHidePreviewBtn" style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 150ms ease;">
+                    ✖ Hide Preview
+                </button>
+            </div>
+        </div>
+        <div id="skPreviewNavControls" class="sk-preview-nav-controls">
+            <button type="button" id="skNavTopBtn" class="sk-preview-nav-btn" title="Scroll to top of document" aria-label="Scroll to top of document">
+                ↑ <span class="nav-label">Top</span>
+            </button>
+            <button type="button" id="skNavClauseBtn" class="sk-preview-nav-btn sk-nav-clause" title="Scroll to clause for current field" aria-label="Scroll to clause for current field" style="display: none;">
+                ◎ <span class="nav-label">Current Clause</span>
+            </button>
+            <button type="button" id="skNavBottomBtn" class="sk-preview-nav-btn" title="Scroll to bottom of document" aria-label="Scroll to bottom of document">
+                ↓ <span class="nav-label">Bottom</span>
             </button>
         </div>
         <div id="previewContent">Fill out the form on the left to see the generated document here...</div>
@@ -104,7 +126,12 @@
     </div>
     <!-- Floating Actions Stack (Bottom Right - Floating over Document) -->
     <div class="floating-actions-stack" style="position:fixed; bottom:24px; right:28px; z-index:99999; display:flex; flex-direction:column; gap:12px; align-items:center;">
-      <button class="floating-circle-btn floating-circle-export" onclick="window.print()" title="Export PDF" style="width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg, #06b6d4, #4f46e5); color:white; border:2px solid rgba(255,255,255,0.4); box-shadow:0 8px 25px rgba(6,182,212,0.5); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; font-weight:700; gap:1px; transition:transform 0.2s;">
+      <button class="floating-circle-btn floating-circle-esign" onclick="triggerEsignRequest(this)" title="Digital eSign (Aadhaar / OTP)" style="width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg, #10b981, #059669); color:white; border:2px solid rgba(255,255,255,0.4); box-shadow:0 8px 25px rgba(16,185,129,0.5); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; font-weight:700; gap:1px; transition:transform 0.2s;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        <span>eSign</span>
+      </button>
+
+      <button class="floating-circle-btn floating-circle-export" onclick="triggerPdfDownload(this)" title="Export PDF" style="width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg, #06b6d4, #4f46e5); color:white; border:2px solid rgba(255,255,255,0.4); box-shadow:0 8px 25px rgba(6,182,212,0.5); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; font-weight:700; gap:1px; transition:transform 0.2s;">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span>Export</span>
       </button>
@@ -115,55 +142,83 @@
       </button>
     </div>
 
-    <!-- AI Legal Copilot Slide-Up Drawer (Exact Matching Dark Theme & Prompt Badges) -->
-    <div id="rentalCopilotDrawer" style="display:none; position:fixed; bottom:90px; right:28px; width:380px; max-width:92vw; height:520px; max-height:75vh; background:#0f172a; border:1px solid rgba(139,92,246,0.3); border-radius:18px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:99999; flex-direction:column; padding:18px; backdrop-filter:blur(16px); color:#f8fafc; font-family:'Segoe UI', system-ui, sans-serif;">
-      
-      <!-- Drawer Header -->
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px; margin-bottom:14px;">
-        <h4 style="font-size:1rem; font-weight:700; color:#c084fc; display:flex; align-items:center; gap:8px; margin:0;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-          AI Legal Copilot
-        </h4>
-        <button onclick="toggleRentalCopilotDrawer()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:18px; line-height:1;">✕</button>
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- AI LEGAL COPILOT — Auto-Expand Panel                          -->
+    <!-- Starts as floating button, expands to full-height right panel -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="copilotOverlay" class="copilot-overlay" onclick="closeCopilotPanel()"></div>
+    <div id="rentalCopilotDrawer" class="copilot-panel">
+
+      <!-- Panel Header -->
+      <div class="copilot-panel-header">
+        <div class="copilot-panel-title">
+          <div class="copilot-title-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          </div>
+          <div>
+            <h4>AI Legal Copilot</h4>
+            <span class="copilot-status-badge">
+              <span class="copilot-status-dot"></span>
+              Online
+            </span>
+          </div>
+        </div>
+        <button class="copilot-close-btn" onclick="closeCopilotPanel()" title="Close Copilot">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
 
       <!-- Quick Prompt Pill Badges -->
-      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
-        <button class="copilot-chip" onclick="sendCopilotQuery('Is lock in clause enabled in this agreement?')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
-          🔍 Lock-in Check
+      <div class="copilot-chips" id="copilotChips">
+        <button class="copilot-chip" onclick="sendCopilotQuery('Is lock in clause enabled in this agreement?')">
+          <span class="chip-icon">🔍</span> Lock-in Check
         </button>
-        <button class="copilot-chip" onclick="sendCopilotQuery('What about repair damages? Are they covered?')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
-          🔧 Repair &amp; Damages
+        <button class="copilot-chip" onclick="sendCopilotQuery('What about repair damages? Are they covered?')">
+          <span class="chip-icon">🔧</span> Repair &amp; Damages
         </button>
-        <button class="copilot-chip" onclick="sendCopilotQuery('Make repair clause more strict for tenant')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
-          🛡️ Enforce Strict Repair
+        <button class="copilot-chip" onclick="sendCopilotQuery('Make repair clause more strict for tenant')">
+          <span class="chip-icon">🛡️</span> Enforce Strict Repair
         </button>
-        <button class="copilot-chip" onclick="sendCopilotQuery('Change notice period to 2 months')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; border-radius:20px; padding:6px 12px; font-size:12px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
-          📅 Change Notice to 2 Months
+        <button class="copilot-chip" onclick="sendCopilotQuery('Change notice period to 2 months')">
+          <span class="chip-icon">📅</span> Notice to 2 Months
+        </button>
+        <button class="copilot-chip" onclick="sendCopilotQuery('Summarize this entire agreement in 5 key points')">
+          <span class="chip-icon">📋</span> Summarize Agreement
+        </button>
+        <button class="copilot-chip" onclick="sendCopilotQuery('Are there any legal risks or missing clauses?')">
+          <span class="chip-icon">⚠️</span> Risk Analysis
         </button>
       </div>
 
-      <!-- Greeting / Chat Box -->
-      <div id="copilotMessages" style="flex:1; overflow-y:auto; font-size:13px; display:flex; flex-direction:column; gap:10px; margin-bottom:14px; padding-right:4px;">
-        <div style="background:rgba(124,58,237,0.15); border:1px solid rgba(139,92,246,0.3); padding:12px 14px; border-radius:12px; color:#e2e8f0; font-size:13px; line-height:1.5;">
-          👋 Hello! Ask me any question about the clauses or tell me to add/modify specific points!
+      <!-- Chat Messages Area -->
+      <div id="copilotMessages" class="copilot-messages">
+        <div class="copilot-welcome-msg">
+          <div class="copilot-welcome-icon">🤖</div>
+          <div>
+            <strong>Welcome to AI Legal Copilot</strong>
+            <p>Ask me anything about your agreement — review clauses, check compliance, or request edits. Use the quick prompts above or type your own question below.</p>
+          </div>
         </div>
       </div>
 
-      <!-- Input Area & Send Icon -->
-      <div style="display:flex; gap:8px; align-items:center;">
-        <input type="text" id="copilotInput" placeholder="Ask AI about agreement or request edit." style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#ffffff; padding:10px 14px; border-radius:12px; font-size:13px; outline:none;" onkeypress="if(event.key==='Enter') sendCopilotQuery()">
-        <button onclick="sendCopilotQuery(document.getElementById('copilotInput').value)" style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #8b5cf6, #6366f1); color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 15px rgba(139,92,246,0.4);">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </button>
+      <!-- Input Area -->
+      <div class="copilot-input-area">
+        <div class="copilot-input-wrapper">
+          <input type="text" id="copilotInput" class="copilot-input" placeholder="Ask about clauses, request changes, or check legal compliance..." onkeypress="if(event.key==='Enter') sendCopilotQuery()" autocomplete="off">
+          <button class="copilot-send-btn" onclick="sendCopilotQuery(document.getElementById('copilotInput').value)" title="Send">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="copilot-input-hint">Press Enter to send · AI responses are for guidance only</div>
       </div>
 
     </div>
 
     <!-- JavaScript: Load order matters -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="/static/js/property_context_bar.js?v={{ static_v }}"></script>
     <script src="/static/js/rental_form_utils.js?v={{ static_v }}"></script>
-    <script type="module" src="/static/js/rental_form_core.js?v={{ static_v }}_20260728_v14"></script>
+    <script type="module" src="/static/js/rental_form_core.js?v={{ static_v }}"></script>
     <script src="/static/js/rental_form_copilot.js?v={{ static_v }}"></script>
 </body>
 </html>

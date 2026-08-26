@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AgreementAI | Smart Legal Agreements</title>
   <meta name="description" content="Generate rental agreements instantly from legal templates with AI-powered review and clause editing.">
-  <link rel="stylesheet" href="/static/css/main.css">
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="/static/css/main.css?v={{ static_v }}">
+  <!-- Lucide Icons (Non-blocking) -->
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js" defer></script>
 </head>
 <body>
 
@@ -32,8 +35,8 @@
       <button class="theme-toggle-btn" id="themeToggleBtn">
         <i data-lucide="sun"></i> <span id="themeModeText">Light Mode</span>
       </button>
-      <a href="/agreements/simple-rental" class="btn-primary">
-        <i data-lucide="file-text"></i> Open Studio →
+      <a href="/create" class="btn-primary">
+        <i data-lucide="sparkles"></i> Create with AI →
       </a>
     </div>
   </nav>
@@ -45,36 +48,36 @@
     <div class="slider-track">
       <!-- Slide 1 -->
       <div class="slide active">
-        <img src="/static/images/hero_slide_1.jpg" alt="Agreement Signing" loading="eager">
+        <img src="/static/images/hero_slide_1.jpg" alt="Agreement Signing" loading="eager" decoding="async">
         <div class="slide-overlay">
           <div class="slide-content">
-            <h1>Draft Agreements<br><span>In Seconds</span></h1>
-            <a href="/agreements/simple-rental" class="btn-primary btn-hero">
-              <i data-lucide="file-text"></i> Start Simple Rental
+            <h1>Create Agreements<br><span>With AI In Minutes</span></h1>
+            <a href="/create?type=simple_rental" class="btn-primary btn-hero">
+              <i data-lucide="sparkles"></i> ✨ Create with AI
             </a>
           </div>
         </div>
       </div>
       <!-- Slide 2 -->
       <div class="slide">
-        <img src="/static/images/hero_slide_2.jpg" alt="Modern Apartment" loading="lazy">
+        <img src="/static/images/hero_slide_2.jpg" alt="Modern Apartment" loading="lazy" decoding="async">
         <div class="slide-overlay">
           <div class="slide-content">
             <h1>Leave &amp; License<br><span>Made Simple</span></h1>
-            <a href="/agreements/leave-and-license" class="btn-primary btn-hero" style="background:linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));">
-              <i data-lucide="scroll-text"></i> Start Leave & License
+            <a href="/create?type=leave_license&state=MH" class="btn-primary btn-hero" style="background:linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));">
+              <i data-lucide="scroll-text"></i> Start with AI
             </a>
           </div>
         </div>
       </div>
       <!-- Slide 3 -->
       <div class="slide">
-        <img src="/static/images/hero_slide_3.jpg" alt="Indian Stamp Paper Legal Tech Workspace" loading="lazy">
+        <img src="/static/images/hero_slide_3.jpg" alt="Indian Stamp Paper Legal Tech Workspace" loading="lazy" decoding="async">
         <div class="slide-overlay">
           <div class="slide-content">
-            <h1>AI Legal Copilot<br><span>Review & Edit Clauses</span></h1>
-            <a href="/agreements/simple-rental" class="btn-primary btn-hero">
-              <i data-lucide="bot"></i> Try AI Copilot →
+            <h1>Aadhaar &amp; Natural Text<br><span>Intelligent Legal Extraction</span></h1>
+            <a href="/create" class="btn-primary btn-hero">
+              <i data-lucide="bot"></i> Open AI Studio →
             </a>
           </div>
         </div>
@@ -98,24 +101,20 @@
   </section>
 
   <!-- ══════════════════════════════════════════════════════════ -->
-  <!-- FEATURE STRIP — Compact Icon Row                          -->
+  <!-- QUICK FEATURE PILLS                                        -->
   <!-- ══════════════════════════════════════════════════════════ -->
   <section class="feature-strip" id="features">
-    <div class="feature-item" onclick="location.href='/agreements/simple-rental'">
-      <div class="feature-icon"><i data-lucide="home"></i></div>
-      <span>Simple Rental</span>
+    <div class="feature-item" onclick="location.href='/create'">
+      <div class="feature-icon" style="background:rgba(139,92,246,0.15); color:var(--accent-purple);"><i data-lucide="sparkles"></i></div>
+      <span>AI Studio</span>
     </div>
-    <div class="feature-item" onclick="location.href='/agreements/leave-and-license'">
-      <div class="feature-icon" style="background:rgba(6,182,212,0.15); color:var(--accent-cyan);"><i data-lucide="scroll-text"></i></div>
-      <span>Leave & License</span>
-    </div>
-    <div class="feature-item" onclick="openAadhaarModal()">
-      <div class="feature-icon" style="background:rgba(16,185,129,0.15); color:var(--accent-emerald);"><i data-lucide="scan-line"></i></div>
+    <div class="feature-item" onclick="location.href='/start-agreement'">
+      <div class="feature-icon" style="background:rgba(6,182,212,0.15); color:var(--accent-cyan);"><i data-lucide="scan-line"></i></div>
       <span>Aadhaar OCR</span>
     </div>
-    <div class="feature-item" onclick="location.href='/agreements/simple-rental'">
+    <div class="feature-item" onclick="location.href='/create'">
       <div class="feature-icon" style="background:rgba(236,72,153,0.15); color:var(--accent-pink);"><i data-lucide="bot"></i></div>
-      <span>AI Copilot</span>
+      <span>Conversational AI</span>
     </div>
     <div class="feature-item" onclick="document.getElementById('stamp-calculator').scrollIntoView({behavior:'smooth'})">
       <div class="feature-icon" style="background:rgba(99,102,241,0.15); color:var(--accent-indigo);"><i data-lucide="indian-rupee"></i></div>
@@ -128,28 +127,34 @@
   <!-- ══════════════════════════════════════════════════════════ -->
   <section class="section-container" id="templates">
     <h2 class="section-title">Choose Your Agreement</h2>
-    <p class="section-subtitle">Select a format to begin drafting.</p>
+    <p class="section-subtitle">Create in seconds with AI or enter details manually.</p>
 
     <div class="agreement-duo">
-      <div class="agreement-card" onclick="location.href='/agreements/simple-rental'">
+      <div class="agreement-card">
         <div class="agreement-card-visual" style="background:linear-gradient(135deg, rgba(139,92,246,0.2), rgba(99,102,241,0.1));">
           <i data-lucide="home" style="width:56px;height:56px;color:var(--accent-purple);"></i>
         </div>
         <div class="agreement-card-body">
-          <h3>Simple Rental Agreement</h3>
+          <h3>Rent Agreement</h3>
           <p>Standard 11-month tenancy contract with rent, deposit, notice & maintenance clauses.</p>
-          <a href="/agreements/simple-rental" class="btn-primary">Draft Now →</a>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
+            <a href="/create?type=simple_rental" class="btn-primary">✨ Create with AI →</a>
+            <a href="/agreements/simple-rental" style="font-size:12px; color:var(--text-muted); text-align:center; text-decoration:underline;">Or fill classic manual form</a>
+          </div>
         </div>
       </div>
 
-      <div class="agreement-card" onclick="location.href='/agreements/leave-and-license'">
+      <div class="agreement-card">
         <div class="agreement-card-visual" style="background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(99,102,241,0.1));">
           <i data-lucide="scroll-text" style="width:56px;height:56px;color:var(--accent-cyan);"></i>
         </div>
         <div class="agreement-card-body">
           <h3>Leave & License Agreement</h3>
           <p>Comprehensive license agreement with lock-in, forfeiture & SPOC clauses.</p>
-          <a href="/agreements/leave-and-license" class="btn-primary" style="background:linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));">Draft Now →</a>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
+            <a href="/create?type=leave_license&state=MH" class="btn-primary" style="background:linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));">✨ Create with AI →</a>
+            <a href="/agreements/leave-and-license" style="font-size:12px; color:var(--text-muted); text-align:center; text-decoration:underline;">Or fill classic manual form</a>
+          </div>
         </div>
       </div>
     </div>
@@ -173,41 +178,6 @@
       </div>
     </div>
   </section>
-
-  <!-- ══════════════════════════════════════════════════════════ -->
-  <!-- MODALS — Aadhaar OCR & Document Studio (unchanged logic) -->
-  <!-- ══════════════════════════════════════════════════════════ -->
-
-  <!-- Aadhaar Upload Modal -->
-  <div class="modal-overlay" id="aadhaarModal">
-    <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-        <h3 style="font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:0.5rem;">
-          <i data-lucide="id-card" style="color:var(--accent-purple)"></i> Aadhaar OCR Field Auto-Fill
-        </h3>
-        <button onclick="closeAadhaarModal()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:1.2rem;">✕</button>
-      </div>
-
-      <div class="drag-drop-zone" id="dropZone" onclick="document.getElementById('aadhaarFileInput').click()">
-        <i data-lucide="upload-cloud" style="width:40px; height:40px; color:var(--accent-purple); margin-bottom:0.5rem;"></i>
-        <p style="font-weight:600; margin-bottom:0.25rem;">Click or Drag & Drop Aadhaar Card Image Here</p>
-        <p style="font-size:0.8rem; color:var(--text-muted);">Supports JPG, PNG, PDF (Front or Back side)</p>
-        <input type="file" id="aadhaarFileInput" style="display:none;" accept="image/*,.pdf" onchange="handleAadhaarUpload(event)">
-      </div>
-
-      <div id="ocrResultBox" style="display:none; background:rgba(0,0,0,0.3); border:1px solid var(--border-glow); padding:1rem; border-radius:8px;">
-        <h4 style="color:var(--accent-emerald); font-size:0.9rem; font-weight:700; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.4rem;">
-          <i data-lucide="check-circle-2"></i> Auto-Extracted Party Details:
-        </h4>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.85rem;" id="ocrDetailsGrid"></div>
-      </div>
-
-      <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem;">
-        <button class="btn-secondary" onclick="closeAadhaarModal()">Close</button>
-        <button class="btn-primary" onclick="applyAadhaarDataToForm()">Apply to Agreement Form →</button>
-      </div>
-    </div>
-  </div>
 
               ✕ Hide Preview
             </button>
@@ -271,7 +241,11 @@
 
   <script src="/static/js/app.js"></script>
   <script>
-    lucide.createIcons();
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
   </script>
 </body>
 </html>

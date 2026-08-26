@@ -47,7 +47,7 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable static file browser caching for live updates
 
 # Centralized static asset cache-busting version (Single Source of Truth)
-STATIC_VERSION = os.getenv("STATIC_VERSION", "20260826_v53_instant_offline_first_extractor")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "20260826_v54_ocr_cache_and_debounce")
 
 @app.context_processor
 def inject_static_version():
@@ -462,10 +462,27 @@ def api_ocr_aadhaar():
         file.save(filepath)
         with open(filepath, 'rb') as f:
             document_bytes = f.read()
+
+        # ── Per-session OCR cache (avoids duplicate API calls on re-upload) ──
+        file_hash = hashlib.sha256(document_bytes).hexdigest()
+        ocr_cache = session.get('_ocr_cache', {})
+        if file_hash in ocr_cache:
+            logger.info(f"OCR cache hit for {filename} (hash={file_hash[:12]}…)")
+            cached = ocr_cache[file_hash]
+            return jsonify({"success": True, "file_name": filename, "extracted": cached, "data": cached, "cached": True})
+
         try:
             extracted = ai_service.extract_aadhaar_ocr(document_bytes, mime_type)
         except AadhaarOcrError as error:
             return jsonify({"success": False, "error": str(error)}), 422
+
+        # Store in session cache (max 4 entries to limit session size)
+        if len(ocr_cache) >= 4:
+            oldest_key = next(iter(ocr_cache))
+            del ocr_cache[oldest_key]
+        ocr_cache[file_hash] = extracted
+        session['_ocr_cache'] = ocr_cache
+
         return jsonify({"success": True, "file_name": filename, "extracted": extracted, "data": extracted})
     finally:
         # Aadhaar source files are highly sensitive: retain only reviewable extracted fields.

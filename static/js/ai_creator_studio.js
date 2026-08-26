@@ -2097,7 +2097,7 @@ function setupChatAddressAutocomplete() {
         console.warn('[Chat Places] Autocomplete error:', err);
         hideDropdown();
       }
-    }, 280);
+    }, 350);
   });
 
   function selectSuggestion(item) {

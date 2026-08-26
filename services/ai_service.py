@@ -92,15 +92,27 @@ RULES:
 
                 client = genai.Client(api_key=api_key)
                 model_name = getattr(Config, "GEMINI_MODEL", "gemini-2.5-flash")
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=f"User: {user_prompt}",
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        temperature=0.4,
-                        system_instruction=system_prompt,
-                    ),
-                )
+                # Fallback model chain for copilot
+                copilot_models = [model_name, "gemini-3.6-flash", "gemini-2.5-flash-preview"]
+                response = None
+                for m_name in copilot_models:
+                    try:
+                        response = client.models.generate_content(
+                            model=m_name,
+                            contents=f"User: {user_prompt}",
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                temperature=0.4,
+                                system_instruction=system_prompt,
+                            ),
+                        )
+                        if response and response.text:
+                            break
+                    except Exception as copilot_err:
+                        logger.warning(f"Copilot model {m_name} error: {copilot_err}")
+                        continue
+                if not response or not response.text:
+                    raise Exception("All copilot models exhausted")
                 raw = (response.text or "").strip()
                 result = self._safe_parse_json(raw)
 
@@ -300,7 +312,7 @@ User's Message:
 
 Extract agreement fields from the user message.
 """
-                candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
+                candidate_models = ["gemini-2.5-flash", "gemini-3.6-flash", "gemini-2.5-flash-preview"]
                 for model_name in candidate_models:
                     try:
                         response = client.models.generate_content(
@@ -1105,9 +1117,8 @@ Never invent values. Use an empty string for a value that is absent or unclear. 
 """
             model_candidates = [
                 "gemini-2.5-flash",
-                "gemini-2.0-flash",
-                "gemini-1.5-flash",
-                "gemini-flash-latest",
+                "gemini-3.6-flash",
+                "gemini-2.5-flash-preview",
             ]
 
             client = genai.Client(api_key=self.gemini_key)
@@ -1125,7 +1136,15 @@ Never invent values. Use an empty string for a value that is absent or unclear. 
                         break
                 except Exception as m_err:
                     last_err = m_err
+                    err_str = str(m_err)
                     logger.warning(f"Aadhaar OCR notice with {model_name}: {m_err}")
+                    # On rate limit, wait briefly before trying next model
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        import time as _time
+                        retry_match = re.search(r'retry in (\d+)', err_str, re.I)
+                        wait_secs = min(int(retry_match.group(1)), 15) if retry_match else 5
+                        logger.info(f"Rate limited on {model_name}, waiting {wait_secs}s before next model...")
+                        _time.sleep(wait_secs)
                     continue
 
             if not response or not response.text:

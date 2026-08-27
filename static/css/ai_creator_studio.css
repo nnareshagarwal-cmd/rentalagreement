@@ -1559,7 +1559,16 @@ body.ai-studio-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+}
+
+.captured-row-val-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
 }
 
 .captured-row-val {
@@ -1568,6 +1577,12 @@ body.ai-studio-body {
   color: #f1f5f9;
   line-height: 1.4;
   word-break: break-word;
+}
+
+.captured-row-status {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .captured-row-val.missing-val {
@@ -1613,6 +1628,128 @@ body.ai-studio-body {
   background: rgba(248, 113, 113, 0.08);
   color: #f87171;
   border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+/* ── Pencil Edit Button ── */
+.captured-edit-btn {
+  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Show pencil more prominently on row hover or focus */
+.captured-row:hover .captured-edit-btn,
+.captured-edit-btn:focus-visible {
+  opacity: 0.95;
+  color: #e2e8f0;
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+.captured-edit-btn:hover {
+  opacity: 1;
+  color: #c084fc;
+  background: rgba(139, 92, 246, 0.28);
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: scale(1.08);
+}
+
+/* ── Inline Edit Container ── */
+.captured-inline-edit-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.captured-inline-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--studio-accent-purple);
+  color: #f1f5f9;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.captured-inline-input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+}
+
+.captured-inline-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.captured-inline-save,
+.captured-inline-cancel {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.captured-inline-save {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.captured-inline-save:hover {
+  background: rgba(16, 185, 129, 0.35);
+}
+
+.captured-inline-cancel {
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.captured-inline-cancel:hover {
+  background: rgba(248, 113, 113, 0.25);
+}
+
+/* For select inline edit */
+.captured-inline-input.select-input {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-color: #1e293b;
+}
+
+.captured-inline-input.select-input option {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+/* For textarea inline edit — allow taller */
+.captured-inline-input.textarea-input {
+  resize: vertical;
+  min-height: 44px;
 }
 
 /* Footer Actions */

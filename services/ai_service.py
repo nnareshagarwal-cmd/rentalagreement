@@ -431,7 +431,8 @@ Extract agreement fields from the user message.
                         current_state.set_field("society_name", resolved["society_name"], source=ProvenanceSource.EXTRACTED_CHAT, confidence=0.98)
                         if "society_name" not in newly_extracted_keys:
                             newly_extracted_keys.append("society_name")
-                    if resolved.get("property_address"):
+                    user_addr = current_state.get_value("property_address") or ""
+                    if resolved.get("property_address") and (not user_addr or len(user_addr) < 25):
                         current_state.set_field("property_address", resolved["property_address"], source=ProvenanceSource.EXTRACTED_CHAT, confidence=0.98)
                         if "property_address" not in newly_extracted_keys:
                             newly_extracted_keys.append("property_address")
@@ -447,6 +448,18 @@ Extract agreement fields from the user message.
                         current_state.set_field("state", resolved["state"], source=ProvenanceSource.EXTRACTED_CHAT, confidence=0.98)
             except Exception as e:
                 logger.warning(f"Places auto-resolution notice: {e}")
+
+        # Ensure PIN code is included in property_address if available and not already present
+        pin = current_state.get_value("pincode")
+        addr = current_state.get_value("property_address")
+        if pin and addr and str(pin) not in str(addr):
+            if re.search(r'\bIndia\b', addr, re.I):
+                addr_with_pin = re.sub(r'(?i)\bIndia\b', f"{pin}, India", addr).strip()
+            else:
+                addr_with_pin = f"{addr} - {pin}"
+            current_state.set_field("property_address", addr_with_pin, source=ProvenanceSource.EXTRACTED_CHAT, confidence=0.98)
+            if "property_address" not in newly_extracted_keys:
+                newly_extracted_keys.append("property_address")
 
         # 4. Apply deterministic auto-calculations (words, end date)
         calculated_keys = InterviewEngine.apply_auto_calculations(current_state)
@@ -759,12 +772,16 @@ Extract agreement fields from the user message.
                         if not extracted.get(f"{prefix}careof"):
                             extracted[f"{prefix}careof"] = existing_careof or "Father Name"
 
-        # 1. Rent Amount (e.g. "rent 55000", "55,000 per month", "rent is 35k", "35000/month", "35k rent", "40k rent", "rent is 40K")
-        rent_match = re.search(r'\b(?:change\s+|update\s+|set\s+)?(?:monthly\s*)?rent(?:al)?\s*(?:is|of|:|=|to)?\s*(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(k|thousand|lakh|l)?(?!\s*months?\b)', cleaned, re.I)
+        # 1. Rent Amount (e.g. "rent 55000", "55,000 per month", "rent is 35k", "35000/month", "35k rent", "40k rent", "rent is 40K", "for 55000 per month")
+        rent_match = re.search(r'\b(?:change\s+|update\s+|set\s+)?(?:monthly\s*)?rent(?:al)?\s*(?:is|of|:|=|to)\s*(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(k|thousand|lakh|l)?(?!\s*months?\b)', cleaned, re.I)
         if not rent_match or not rent_match.group(1):
             rent_match = re.search(r'(?:^|[,;.\s]|and\s+)(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(k|thousand|lakh|l)?\s*(?:per\s*month|/mo|pm)?\s*(?:rs\.?|inr|₹)?\s*rent\b', cleaned, re.I)
         if not rent_match or not rent_match.group(1):
+            rent_match = re.search(r'\b(?:change\s+|update\s+|set\s+)?(?:monthly\s*)?rent(?:al)?\s*(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(k|thousand|lakh|l)?(?!\s*(?:months?|deposit|depost|deposite|advance)\b)', cleaned, re.I)
+        if not rent_match or not rent_match.group(1):
             rent_match = re.search(r'\b(?:rs\.?|inr|₹)\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(k|thousand|lakh|l)?\s*(?:per\s*month|/mo|pm|a\s*month)\b', cleaned, re.I)
+        if not rent_match or not rent_match.group(1):
+            rent_match = re.search(r'\bfor\s+(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(k|thousand|lakh|l)?\s*(?:per\s*month|/mo|pm|a\s*month)?\b', cleaned, re.I)
         
         if rent_match and rent_match.group(1):
             num_str = rent_match.group(1).replace(",", "")
@@ -780,9 +797,11 @@ Extract agreement fields from the user message.
                 pass
 
         # 2. Security Deposit (e.g. "deposit 3 lakh", "deposit is 1.5L", "deposit of 2,00,000", "1.5 lakh deposit", "80k depost", "deposit is 80K", "advance 50000")
-        dep_match = re.search(r'\b(?:security\s*)?(?:deposit|depost|deposite|advance)\s*(?:is|of|:|=)?\s*(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(lakh|l|k|thousand)?', cleaned, re.I)
+        dep_match = re.search(r'\b(?:security\s*)?(?:deposit|depost|deposite|advance)\s*(?:is|of|:|=)\s*(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(lakh|l|k|thousand)?(?!\s*(?:st|nd|rd|th|months?\b))', cleaned, re.I)
         if not dep_match or not dep_match.group(1):
             dep_match = re.search(r'(?:^|[,;.\s]|and\s+)(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(lakh|l|k|thousand)?\s*(?:rs\.?|inr|₹)?\s*(?:security\s*)?(?:deposit|depost|deposite|advance)\b', cleaned, re.I)
+        if not dep_match or not dep_match.group(1):
+            dep_match = re.search(r'\b(?:security\s*)?(?:deposit|depost|deposite|advance)\s*(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?|\d+(?:,\d+)*)\s*(lakh|l|k|thousand)?(?!\s*(?:st|nd|rd|th|months?\b))', cleaned, re.I)
 
         if dep_match and dep_match.group(1):
             num_str = dep_match.group(1).replace(",", "")
@@ -858,15 +877,14 @@ Extract agreement fields from the user message.
         direct_name_m = re.match(r'^(?:(?:my|the)\s+name\s+is\s+|i\s+am\s+|name:\s*)?([A-Za-z]+(?:\s+[A-Za-z]+)*)$', cleaned.strip())
         if direct_name_m and not extracted.get("owner1_name") and not extracted.get("tenant1_name"):
             cand_name = direct_name_m.group(1).strip()
-            cand_name_formatted = " ".join(w.capitalize() for w in cand_name.split())
             non_names = {
-                "Simple Rental", "Rent Agreement", "Leave License", "Security Deposit",
-                "Monthly Rent", "Notice Period", "Yes", "No", "Ok", "Sure", "Hi", "Hello",
-                "Hey", "Thanks", "Thank You", "Owner", "Tenant", "Landlord", "Broker", "Agent",
-                "Start", "Next", "Help", "Cancel", "Is", "Name", "My Name", "The Name"
+                "yes", "no", "ok", "okay", "sure", "cancel", "done", "next", "hi", "hello", "hey",
+                "rent", "deposit", "owner", "tenant", "draft", "preview", "generate", "start", "stop"
             }
-            if cand_name_formatted not in non_names and len(cand_name_formatted) >= 2:
-                if not re.search(r'\d', cand_name) and not re.search(r'\b(flat|bhk|rent|deposit|month|year|road|nagar|colony|street|society)\b', cand_name, re.I):
+            if cand_name.lower() not in non_names and len(cand_name) > 2 and not re.search(r'\d', cand_name):
+                cand_name_formatted = " ".join(w.capitalize() for w in cand_name.split())
+                if current_state:
+                    user_role = getattr(current_state, "user_role", "owner").lower()
                     if user_role == "tenant" and not (current_state and current_state.get_value("tenant1_name")):
                         extracted["tenant1_name"] = cand_name_formatted
                     elif not (current_state and current_state.get_value("owner1_name")):
@@ -887,16 +905,38 @@ Extract agreement fields from the user message.
             extracted["city"] = city_match.group(1).capitalize()
 
         # Property address context
-        if "renting" in cleaned.lower():
+        prop_explicit_m = re.search(r'(?:rented\s+|rental\s+)?property(?:\s+address)?\s*(?::|\s+is|\s+at|\s+located\s+at)\s*(.+)', cleaned, re.I)
+        if prop_explicit_m:
+            raw_prop = prop_explicit_m.group(1).strip()
+            prop_clean = re.split(r'(?:\n|\b(?:monthly\s+)?rent\s*(?::|is)\b|\bsecurity\s+deposit\s*(?::|is)\b|\bdeposit\s*(?::|is)\b|\bstart\s+date\s*(?::|is)\b)', raw_prop, flags=re.I)[0].strip(' ,.-')
+            prop_clean = re.sub(r'^(?:address\s*:?\s*)', '', prop_clean, flags=re.I).strip(' ,.-')
+            if prop_clean and len(prop_clean) > 3:
+                extracted["property_address"] = prop_clean
+        elif re.search(r'\b(?:my\s+)?(?:flat|apartment|house|property|villa|unit)\s+is\s+in\s+', cleaned, re.I):
+            in_m = re.search(r'\b(?:my\s+)?(?:flat|apartment|house|property|villa|unit)\s+is\s+in\s+(.+)', cleaned, re.I)
+            if in_m:
+                cand = in_m.group(1).strip()
+                cand = re.split(r'\b(?:rent\s+is|deposit\s+is|start\s+date|starts)\b', cand, flags=re.I)[0].strip(' ,.-')
+                if cand and len(cand) > 3:
+                    extracted["property_address"] = cand
+        elif "renting" in cleaned.lower():
             renting_part = cleaned.split("renting", 1)[-1]
             prop_candidate = re.split(r'\b(?:to\s+[A-Z][a-z]+|for\s+\d+|from\s+\d+|with\s+deposit)\b', renting_part, flags=re.I)[0]
             prop_clean = re.sub(r'^(?:(?:my|the)\s+)?(?:\d+BHK\s+)?(?:flat|apartment|house|property|villa|unit|home)\s*(?:no\.?|#|[0-9]+[A-Za-z0-9\-]*)?\s*(?:at|in|located\s+at|located\s+in)?\s*', '', prop_candidate.strip(), flags=re.I).strip(' ,.-')
             if prop_clean and len(prop_clean) > 3:
                 extracted["property_address"] = prop_clean
-        elif "property" in cleaned.lower():
-            prop_m = re.search(r'property(?:\s+is|\s*:)?\s*([^,.\n]+)', cleaned, re.I)
-            if prop_m and prop_m.group(1):
-                extracted["property_address"] = prop_m.group(1).strip()
+        elif re.search(r'^(?:(?:flat|apartment|unit|villa|house)\s+[A-Za-z0-9\-]+\s*(?:at|in|,)\s*)?([A-Za-z0-9\s]+(?:colony|nagar|society|towers|heights|city|apartments|villas|road|layout|enclave|greens|acres|gardens|view)[A-Za-z0-9\s,]*)', cleaned, re.I):
+            front_m = re.search(r'^(?:(?:flat|apartment|unit|villa|house)\s+[A-Za-z0-9\-]+\s*(?:at|in|,)\s*)?([A-Za-z0-9\s]+(?:colony|nagar|society|towers|heights|city|apartments|villas|road|layout|enclave|greens|acres|gardens|view)[A-Za-z0-9\s,]*)', cleaned, re.I)
+            if front_m:
+                cand = front_m.group(1).strip()
+                cand = re.split(r'\b(?:rent|deposit|depost|start|starts|from|for|to)\b', cand, flags=re.I)[0].strip(' ,.-')
+                if cand and len(cand) > 3:
+                    extracted["property_address"] = cand
+        elif cleaned.count(",") >= 2 or re.search(r'\b(road|street|nagar|colony|layout|society|enclave|towers|heights|apartments|villas|kondapur|gachibowli|hitech|madhapur|miyapur|whitefield|indiranagar|koramangala|bellandur|telangana|karnataka|maharashtra|india)\b', cleaned, re.I):
+            cand = cleaned.strip()
+            cand = re.split(r'\b(?:rent\s+is|deposit\s+is|start\s+date|starts)\b', cand, flags=re.I)[0].strip(' ,.-')
+            if len(cand) > 10 and not cand.lower().startswith(("rent", "deposit", "agreement", "i am", "my name is", "owner is", "tenant is")):
+                extracted["property_address"] = cand
         
         if not extracted.get("property_address") and ("flat_no" in extracted or "city" in extracted):
             parts = []

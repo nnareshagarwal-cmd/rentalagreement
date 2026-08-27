@@ -15,6 +15,9 @@ let currentAgreementState = {
 let fieldRegistry = [];
 let sectionLabels = {};
 let sectionOrder = [];
+let _lastReadiness = {};
+let _lastAppliedFields = {};
+let _activeInlineEditKey = null;
 /**
  * Escape HTML to prevent XSS and rendering errors
  */
@@ -431,8 +434,22 @@ async function processKickstartFile(role, file) {
         dropzone.innerHTML = renderDropzoneInner(role, true);
       }
 
-      // Re-sync with backend (updates live preview on right)
+      // Explicitly expand this role's accordion section (owner / tenant)
+      if (!window.expandedCapturedSections) {
+        window.expandedCapturedSections = new Set();
+      }
+      window.expandedCapturedSections.add(role);
+
+      // Re-sync with backend (updates live preview and Captured Details on right)
       await syncStateWithBackend();
+
+      // Scroll to the updated accordion section on right panel
+      setTimeout(() => {
+        const sectionEl = document.getElementById(`capturedAccordion_${role}`);
+        if (sectionEl) {
+          sectionEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
 
       const hasOwner = Boolean(currentAgreementState.fields?.owner1_name?.value);
       const hasTenant = Boolean(currentAgreementState.fields?.tenant1_name?.value);
@@ -848,20 +865,68 @@ async function sendUserMessage(customText = null) {
 }
 
 /**
+ * Helper to detect newly added or updated non-empty fields between old and new state
+ */
+function getChangedFieldKeys(oldFields, newFields) {
+  const changed = [];
+  if (!newFields) return changed;
+  for (const key of Object.keys(newFields)) {
+    const newVal = newFields[key]?.value;
+    const oldVal = oldFields?.[key]?.value;
+    if (newVal !== undefined && newVal !== null && String(newVal).trim() !== '' && newVal !== oldVal) {
+      changed.push(key);
+    }
+  }
+  return changed;
+}
+
+/**
  * Update UI from backend creator-chat response payload
  */
 function applyStateResponse(data) {
   if (!data) return;
 
+  let lastChangedSectionId = null;
+
   if (data.agreement_state) {
+    // Auto-expand accordion sections that contain newly added or updated fields
+    const prevFields = Object.keys(_lastAppliedFields).length > 0 ? _lastAppliedFields : currentAgreementState?.fields;
+    const changedKeys = getChangedFieldKeys(prevFields, data.agreement_state?.fields);
+    if (changedKeys.length > 0 && typeof CAPTURED_SECTIONS_CONFIG !== 'undefined') {
+      if (!window.expandedCapturedSections) {
+        window.expandedCapturedSections = new Set();
+      }
+      for (const key of changedKeys) {
+        const matchingSection = CAPTURED_SECTIONS_CONFIG.find(sec =>
+          sec.fields && sec.fields.some(f => f.key === key)
+        );
+        if (matchingSection) {
+          window.expandedCapturedSections.add(matchingSection.id);
+          lastChangedSectionId = matchingSection.id;
+        }
+      }
+    }
+
     currentAgreementState = data.agreement_state;
+    _lastAppliedFields = JSON.parse(JSON.stringify(currentAgreementState.fields || {}));
     // Persist draft safely
     localStorage.setItem('agreementai_studio_draft', JSON.stringify(currentAgreementState));
   }
 
   // Update Readiness Banner & Checklist
   if (data.readiness) {
+    _lastReadiness = data.readiness;
     updateReadinessUI(data.readiness);
+  }
+
+  // Smoothly scroll the right panel to the newly updated accordion section
+  if (lastChangedSectionId) {
+    setTimeout(() => {
+      const sectionEl = document.getElementById(`capturedAccordion_${lastChangedSectionId}`);
+      if (sectionEl) {
+        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
   }
 
   // Update Suggestion Chips & Datepicker prompt
@@ -959,13 +1024,9 @@ const CAPTURED_SECTIONS_CONFIG = [
     title: 'Property Details',
     icon: '🏠',
     fields: [
-      { key: 'property_address', label: 'Rental Address', required: true },
+      { key: 'property_address', label: 'Rented Property Address', required: true },
       { key: 'property_no', label: 'Flat / Door Number', required: false },
-      { key: 'society_name', label: 'Society / Building Name', required: false },
-      { key: 'property_block', label: 'Block / Tower', required: false },
-      { key: 'property_city', label: 'City', required: false },
-      { key: 'property_type', label: 'Property Type', required: false },
-      { key: 'property_area', label: 'Built-up Area (sq ft)', required: false },
+      { key: 'society_name', label: 'Society Name / Project', required: false },
     ]
   },
   {
@@ -1068,7 +1129,7 @@ function updateReadinessUI(readiness) {
         if (!hasLockin) return;
       }
 
-      const fieldEntry = stateFields[f.key];
+      const fieldEntry = stateFields[f.key] || (f.key === 'property_no' ? stateFields.flat_no : null);
       const hasValue = fieldEntry && fieldEntry.value !== null && fieldEntry.value !== undefined && String(fieldEntry.value).trim() !== '';
 
       const isRequired = f.required || 
@@ -1119,12 +1180,15 @@ function updateReadinessUI(readiness) {
         label = regDef.label;
       }
 
+      const isEditable = !regDef || (!regDef.readonly && regDef.type !== 'hidden');
+
       visibleRows.push({
         key: f.key,
         label: label,
         displayValue: displayValue,
         hasValue: hasValue,
         isRequired: isRequired,
+        isEditable: isEditable,
         statusType: statusType,
         statusLabel: statusLabel,
         pillClass: pillClass
@@ -1238,13 +1302,26 @@ function updateReadinessUI(readiness) {
       sec.rows.forEach(r => {
         const row = document.createElement('div');
         row.className = 'captured-row';
+        row.dataset.fieldKey = r.key;
+
+        const editBtnHtml = r.isEditable !== false ? `
+          <button type="button" class="captured-edit-btn" 
+                  title="Edit ${escapeHtml(r.label)}" 
+                  data-field-key="${r.key}"
+                  onclick="openInlineEdit(event, '${r.key}')">
+            <i data-lucide="pencil" style="width:11px;height:11px;"></i>
+          </button>
+        ` : '';
 
         row.innerHTML = `
           <div class="captured-row-label">${escapeHtml(r.label)}</div>
           <div class="captured-row-val-wrap">
-            <div class="captured-row-val">${r.displayValue}</div>
+            <div class="captured-row-val-group">
+              <span class="captured-row-val" id="capturedVal_${r.key}">${r.displayValue}</span>
+              ${editBtnHtml}
+            </div>
             <div class="captured-row-status">
-              <span class="captured-status-pill ${r.pillClass}">${r.statusLabel}</span>
+              <span class="captured-status-pill ${r.pillClass}" id="capturedPill_${r.key}">${r.statusLabel}</span>
             </div>
           </div>
         `;
@@ -1262,6 +1339,156 @@ function updateReadinessUI(readiness) {
     }
   }
 }
+
+/**
+ * Open inline edit mode for a field in the Captured Details inspector
+ */
+function openInlineEdit(event, fieldKey) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  // If another edit is already open, cancel it first to restore UI
+  if (_activeInlineEditKey && _activeInlineEditKey !== fieldKey) {
+    cancelInlineEdit();
+  }
+
+  _activeInlineEditKey = fieldKey;
+
+  const rowEl = document.querySelector(`.captured-row[data-field-key="${fieldKey}"]`);
+  if (!rowEl) return;
+
+  const valWrap = rowEl.querySelector('.captured-row-val-wrap');
+  if (!valWrap) return;
+
+  // Lookup field definition from fieldRegistry
+  const regDef = (fieldRegistry || []).find(rf => rf.key === fieldKey) || {};
+  const rawValue = (currentAgreementState.fields?.[fieldKey]?.value) || '';
+
+  let inputHtml = '';
+  if (regDef.type === 'select') {
+    const options = regDef.options || [];
+    const optTags = options.map(opt => {
+      const isSelected = String(opt).toLowerCase() === String(rawValue).toLowerCase();
+      return `<option value="${escapeHtml(opt)}"${isSelected ? ' selected' : ''}>${escapeHtml(opt)}</option>`;
+    }).join('');
+    inputHtml = `
+      <select class="captured-inline-input select-input" id="inlineInput_${fieldKey}">
+        <option value="">-- Select --</option>
+        ${optTags}
+      </select>
+    `;
+  } else if (regDef.type === 'textarea') {
+    inputHtml = `
+      <textarea class="captured-inline-input textarea-input" id="inlineInput_${fieldKey}" rows="2" placeholder="Enter ${escapeHtml(regDef.label || fieldKey)}...">${escapeHtml(rawValue)}</textarea>
+    `;
+  } else if (regDef.type === 'date') {
+    inputHtml = `
+      <input type="date" class="captured-inline-input" id="inlineInput_${fieldKey}" value="${escapeHtml(rawValue)}" />
+    `;
+  } else {
+    // text / number / currency / etc.
+    inputHtml = `
+      <input type="text" class="captured-inline-input" id="inlineInput_${fieldKey}" value="${escapeHtml(rawValue)}" placeholder="Enter ${escapeHtml(regDef.label || fieldKey)}..." autocomplete="off" />
+    `;
+  }
+
+  valWrap.innerHTML = `
+    <div class="captured-inline-edit-wrap">
+      ${inputHtml}
+      <div class="captured-inline-actions">
+        <button type="button" class="captured-inline-save" title="Save (Enter)" onclick="handleInlineSaveClick('${fieldKey}')">✓</button>
+        <button type="button" class="captured-inline-cancel" title="Cancel (Esc)" onclick="cancelInlineEdit()">✕</button>
+      </div>
+    </div>
+  `;
+
+  const inputEl = valWrap.querySelector('.captured-inline-input');
+  if (inputEl) {
+    inputEl.focus();
+    if (inputEl.select && regDef.type !== 'date' && regDef.type !== 'select') {
+      inputEl.select();
+    }
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (regDef.type === 'textarea' && (e.shiftKey || e.ctrlKey)) {
+          return; // Allow multiline in textarea with shift+Enter
+        }
+        e.preventDefault();
+        handleInlineSaveClick(fieldKey);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelInlineEdit();
+      }
+    });
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+/**
+ * Handle Save button click for inline edit
+ */
+function handleInlineSaveClick(fieldKey) {
+  const inputEl = document.getElementById(`inlineInput_${fieldKey}`);
+  if (!inputEl) return;
+  const newValue = inputEl.value;
+  saveInlineEdit(fieldKey, newValue);
+}
+
+/**
+ * Save inline edited value into shared state and sync with backend
+ */
+async function saveInlineEdit(fieldKey, newValue) {
+  const trimmed = (newValue || '').trim();
+
+  if (!currentAgreementState.fields) {
+    currentAgreementState.fields = {};
+  }
+
+  if (trimmed) {
+    currentAgreementState.fields[fieldKey] = {
+      key: fieldKey,
+      value: trimmed,
+      status: 'confirmed',
+      source: 'user_explicit',
+      confidence: 1.0,
+      confirmed_at: new Date().toISOString()
+    };
+  } else {
+    delete currentAgreementState.fields[fieldKey];
+  }
+
+  _activeInlineEditKey = null;
+
+  // Persist draft locally
+  localStorage.setItem('agreementai_studio_draft', JSON.stringify(currentAgreementState));
+
+  // Sync with backend — recalculates readiness and live preview, and automatically re-renders captured panel
+  await syncStateWithBackend();
+}
+
+/**
+ * Cancel active inline edit and restore inspector view
+ */
+function cancelInlineEdit() {
+  _activeInlineEditKey = null;
+  if (_lastReadiness && Object.keys(_lastReadiness).length > 0) {
+    updateReadinessUI(_lastReadiness);
+  } else {
+    syncStateWithBackend();
+  }
+}
+
+window.openInlineEdit = openInlineEdit;
+window.saveInlineEdit = saveInlineEdit;
+window.cancelInlineEdit = cancelInlineEdit;
+window.handleInlineSaveClick = handleInlineSaveClick;
+
 
 /**
  * Escape HTML to prevent XSS and rendering errors

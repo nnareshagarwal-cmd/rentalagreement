@@ -94,17 +94,17 @@
       </div>
     </section>
 
-    <!-- RIGHT: Agreement Details Board & Live Document Preview -->
+    <!-- RIGHT: Captured Details Live Inspector & Agreement Preview -->
     <section class="studio-details-panel">
       
       <!-- Tab Header -->
       <div class="studio-panel-tabs">
         <div class="studio-tab-group">
           <button type="button" class="studio-tab-btn active" id="tabSummaryBtn" onclick="switchStudioTab('summary')">
-            <i data-lucide="layout-dashboard" style="width:14px;height:14px;"></i> Agreement Details & Readiness
+            <i data-lucide="layout-dashboard" style="width:14px;height:14px;"></i> Captured Details
           </button>
           <button type="button" class="studio-tab-btn" id="tabPreviewBtn" onclick="switchStudioTab('preview')">
-            <i data-lucide="file-text" style="width:14px;height:14px;"></i> Full Legal Preview
+            <i data-lucide="file-text" style="width:14px;height:14px;"></i> Agreement Preview
           </button>
         </div>
         <div style="font-size:12px; color:var(--studio-text-dim);" id="autoSaveIndicator">
@@ -112,30 +112,33 @@
         </div>
       </div>
 
-      <!-- Tab 1: Agreement Details & Readiness View -->
+      <!-- Tab 1: Captured Details Live Inspector View -->
       <div class="studio-tab-content active" id="studioSummaryTab">
         
-        <!-- Readiness Banner -->
-        <div class="readiness-banner" id="readinessBanner">
-          <div class="readiness-info">
-            <h3 id="readinessHeadline">Setting up agreement...</h3>
-            <p id="readinessSubtext">Describe your rental terms on the left to begin.</p>
+        <!-- Compact Status Indicator Bar -->
+        <div class="captured-status-bar" id="capturedStatusBar">
+          <div class="captured-status-left">
+            <span class="captured-status-dot" id="capturedStatusDot"></span>
+            <span class="captured-status-text" id="capturedStatusText">0 details captured · Initializing...</span>
           </div>
-          <div class="readiness-badge pending" id="readinessBadge">
-            <span id="readinessBadgeText">0 Required Items</span>
+          <div class="captured-status-badge pending" id="capturedStatusBadge">
+            <span id="capturedStatusBadgeText">In Progress</span>
           </div>
         </div>
 
-        <!-- Required Fields Status Section -->
-        <div>
-          <div class="details-section-title">Required Details</div>
-          <div class="summary-cards-grid" id="requiredCardsGrid"></div>
+        <!-- 5 Natural Collapsible Sections Container -->
+        <div class="captured-sections-list" id="capturedSectionsList">
+          <!-- Dynamically populated by JS: Owner, Tenant, Property, Dates & Tenure, Financial -->
         </div>
 
-        <!-- Recommended & Optional Terms Section -->
-        <div>
-          <div class="details-section-title">Recommended Legal Terms</div>
-          <div class="summary-cards-grid" id="recommendedCardsGrid"></div>
+        <!-- Compact Bottom Quick Actions -->
+        <div class="captured-footer-actions">
+          <button type="button" class="studio-btn studio-btn-secondary" onclick="toggleFormDrawer()" style="flex:1; justify-content:center;">
+            <i data-lucide="sliders-horizontal" style="width:14px;height:14px;"></i> Review / Edit Details
+          </button>
+          <button type="button" class="studio-btn studio-btn-primary" onclick="switchStudioTab('preview')" style="flex:1; justify-content:center;">
+            <i data-lucide="file-text" style="width:14px;height:14px;"></i> Preview Agreement
+          </button>
         </div>
 
       </div>

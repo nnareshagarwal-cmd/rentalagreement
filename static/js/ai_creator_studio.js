@@ -902,86 +902,364 @@ function applyStateResponse(data) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CAPTURED DETAILS LIVE INSPECTOR BOARD
+// ═══════════════════════════════════════════════════════════════
+
+// Set to track user expanded/collapsed accordion sections
+window.expandedCapturedSections = window.expandedCapturedSections || new Set();
+
+const CAPTURED_SECTIONS_CONFIG = [
+  {
+    id: 'owner',
+    title: 'Owner Details',
+    icon: '👤',
+    fields: [
+      { key: 'owner1_name', label: 'Full Name', required: true },
+      { key: 'owner1_age', label: 'Age', required: true },
+      { key: 'owner1_careofname', label: 'Father / Husband Name', required: true },
+      { key: 'owner1_address', label: 'Permanent Address', required: true },
+      { key: 'owner1_occupation', label: 'Occupation', required: true },
+      { key: 'owner1_phone', label: 'Mobile Number', required: true },
+      { key: 'owner1_email', label: 'Email ID', required: false },
+      { key: 'owner2_name', label: 'Owner 2 Full Name', required: false, multiParty: 2 },
+      { key: 'owner2_age', label: 'Owner 2 Age', required: false, multiParty: 2 },
+      { key: 'owner2_careofname', label: 'Owner 2 Care of', required: false, multiParty: 2 },
+      { key: 'owner2_address', label: 'Owner 2 Address', required: false, multiParty: 2 },
+      { key: 'owner2_occupation', label: 'Owner 2 Occupation', required: false, multiParty: 2 },
+      { key: 'owner2_phone', label: 'Owner 2 Mobile', required: false, multiParty: 2 },
+      { key: 'owner2_email', label: 'Owner 2 Email', required: false, multiParty: 2 },
+    ]
+  },
+  {
+    id: 'tenant',
+    title: 'Tenant Details',
+    icon: '👤',
+    fields: [
+      { key: 'tenant1_name', label: 'Full Name', required: true },
+      { key: 'tenant1_age', label: 'Age', required: true },
+      { key: 'tenant1_careofname', label: 'Father / Husband Name', required: true },
+      { key: 'tenant1_address', label: 'Permanent Address', required: true },
+      { key: 'tenant1_occupation', label: 'Occupation', required: true },
+      { key: 'tenant1_phone', label: 'Mobile Number', required: true },
+      { key: 'tenant1_email', label: 'Email ID', required: false },
+      { key: 'tenant_poc', label: 'SPOC / Point of Contact', required: false, condition: 'bachelor' },
+      { key: 'tenant_gender', label: 'Tenant Gender', required: false, condition: 'bachelor' },
+      { key: 'tenant2_name', label: 'Tenant 2 Full Name', required: false, multiParty: 2 },
+      { key: 'tenant2_age', label: 'Tenant 2 Age', required: false, multiParty: 2 },
+      { key: 'tenant2_careofname', label: 'Tenant 2 Care of', required: false, multiParty: 2 },
+      { key: 'tenant2_address', label: 'Tenant 2 Address', required: false, multiParty: 2 },
+      { key: 'tenant2_occupation', label: 'Tenant 2 Occupation', required: false, multiParty: 2 },
+      { key: 'tenant2_phone', label: 'Tenant 2 Mobile', required: false, multiParty: 2 },
+      { key: 'tenant2_email', label: 'Tenant 2 Email', required: false, multiParty: 2 },
+    ]
+  },
+  {
+    id: 'property',
+    title: 'Property Details',
+    icon: '🏠',
+    fields: [
+      { key: 'property_address', label: 'Rental Address', required: true },
+      { key: 'property_no', label: 'Flat / Door Number', required: false },
+      { key: 'society_name', label: 'Society / Building Name', required: false },
+      { key: 'property_block', label: 'Block / Tower', required: false },
+      { key: 'property_city', label: 'City', required: false },
+      { key: 'property_type', label: 'Property Type', required: false },
+      { key: 'property_area', label: 'Built-up Area (sq ft)', required: false },
+    ]
+  },
+  {
+    id: 'dates',
+    title: 'Agreement Dates & Tenure',
+    icon: '📅',
+    fields: [
+      { key: 'agreement_start_date', label: 'Start Date', required: true },
+      { key: 'agreement_end_date', label: 'End Date', required: true },
+      { key: 'agreement_date', label: 'Execution / Today\'s Date', required: false },
+      { key: 'lockin_months', label: 'Lock-in Months', required: false, condition: 'lockin' },
+      { key: 'lockin_end_date', label: 'Lock-in End Date', required: false, condition: 'lockin' },
+      { key: 'penalty_deduction', label: 'Lock-in Penalty (Days)', required: false, condition: 'lockin' },
+      { key: 'tenant_type', label: 'Tenant Type', required: false },
+    ]
+  },
+  {
+    id: 'financial',
+    title: 'Financial Details',
+    icon: '💰',
+    fields: [
+      { key: 'monthly_rent', label: 'Monthly Rent', required: true },
+      { key: 'security_deposit', label: 'Security Deposit', required: true },
+      { key: 'maintenance', label: 'Maintenance', required: true },
+      { key: 'notice_period', label: 'Notice Period', required: true },
+      { key: 'rent_increase_type', label: 'Rent Increase Type', required: false },
+      { key: 'increase_percent', label: 'Rent Increase Rate', required: false },
+      { key: 'annexure', label: 'Annexure / Custom Clauses', required: false },
+    ]
+  }
+];
+
 /**
- * Render the Readiness board cards
+ * Toggle accordion section open/closed
+ */
+function toggleCapturedSection(sectionId) {
+  if (window.expandedCapturedSections.has(sectionId)) {
+    window.expandedCapturedSections.delete(sectionId);
+  } else {
+    window.expandedCapturedSections.add(sectionId);
+  }
+  const el = document.getElementById(`capturedAccordion_${sectionId}`);
+  if (el) {
+    el.classList.toggle('open', window.expandedCapturedSections.has(sectionId));
+    if (window.lucide) lucide.createIcons();
+  }
+}
+window.toggleCapturedSection = toggleCapturedSection;
+
+/**
+ * Render the Captured Details Live Inspector Board
  */
 function updateReadinessUI(readiness) {
-  const headlineEl = document.getElementById('readinessHeadline');
-  const badgeEl = document.getElementById('readinessBadge');
-  const badgeTextEl = document.getElementById('readinessBadgeText');
-  const reqGrid = document.getElementById('requiredCardsGrid');
-  const recGrid = document.getElementById('recommendedCardsGrid');
+  if (!readiness) readiness = {};
 
-  if (headlineEl) headlineEl.textContent = readiness.headline || 'Agreement Details';
+  const statusTextEl = document.getElementById('capturedStatusText');
+  const statusDotEl = document.getElementById('capturedStatusDot');
+  const statusBadgeEl = document.getElementById('capturedStatusBadge');
+  const statusBadgeTextEl = document.getElementById('capturedStatusBadgeText');
+  const sectionsListEl = document.getElementById('capturedSectionsList');
 
-  if (badgeEl && badgeTextEl) {
-    if (readiness.ready_for_generation) {
-      badgeEl.className = 'readiness-badge';
-      badgeTextEl.textContent = '✓ Ready to Generate';
-    } else if (readiness.ready_for_review) {
-      badgeEl.className = 'readiness-badge pending';
-      badgeTextEl.textContent = 'Ready for Review';
+  // Compatibility fallback for old banner/cards elements if template wasn't refreshed
+  const legacyHeadlineEl = document.getElementById('readinessHeadline');
+  if (legacyHeadlineEl) legacyHeadlineEl.textContent = readiness.headline || 'Captured Details';
+
+  const requiredMissingKeys = new Set((readiness.required_missing || []).map(m => m.key));
+  const requiredCompletedKeys = new Set((readiness.required_completed || []).map(c => c.key));
+  const requiredNeedsConfirmKeys = new Set((readiness.required_needs_confirmation || []).map(n => n.key));
+
+  const stateFields = (currentAgreementState && currentAgreementState.fields) ? currentAgreementState.fields : {};
+
+  // Process all 5 sections
+  const sectionsData = CAPTURED_SECTIONS_CONFIG.map(secConfig => {
+    let capturedCount = 0;
+    let missingCount = 0;
+
+    const visibleRows = [];
+
+    secConfig.fields.forEach(f => {
+      // Check multi-party condition (e.g. owner2_... or tenant2_...)
+      if (f.multiParty) {
+        const ownerCount = parseInt(stateFields.owner_count?.value || '1', 10);
+        const tenantCount = parseInt(stateFields.tenant_count?.value || '1', 10);
+        const hasVal = Boolean(stateFields[f.key]?.value);
+        if (f.key.startsWith('owner') && ownerCount < f.multiParty && !hasVal) return;
+        if (f.key.startsWith('tenant') && tenantCount < f.multiParty && !hasVal) return;
+      }
+
+      // Check bachelor / lockin conditions
+      if (f.condition === 'bachelor') {
+        const isBachelor = (currentAgreementState.scenario === 'bachelor') || 
+                           (stateFields.tenant_type?.value === 'Bachelor') || 
+                           Boolean(stateFields[f.key]?.value);
+        if (!isBachelor) return;
+      }
+      if (f.condition === 'lockin') {
+        const hasLockin = (stateFields.lockin?.value === 'Y') || 
+                          Boolean(stateFields.lockin_months?.value) || 
+                          Boolean(stateFields[f.key]?.value);
+        if (!hasLockin) return;
+      }
+
+      const fieldEntry = stateFields[f.key];
+      const hasValue = fieldEntry && fieldEntry.value !== null && fieldEntry.value !== undefined && String(fieldEntry.value).trim() !== '';
+
+      const isRequired = f.required || 
+                         requiredMissingKeys.has(f.key) || 
+                         requiredCompletedKeys.has(f.key) || 
+                         requiredNeedsConfirmKeys.has(f.key);
+
+      let displayValue = '';
+      let statusType = 'missing';
+      let statusLabel = '⏳ Missing';
+      let pillClass = 'pill-missing';
+
+      if (hasValue) {
+        displayValue = formatFieldValue(f.key, fieldEntry.value);
+        statusType = fieldEntry.status || 'confirmed';
+        capturedCount++;
+
+        if (statusType === 'confirmed' || statusType === 'user_confirmed') {
+          statusLabel = '✓ Verified';
+          pillClass = 'pill-confirmed';
+        } else if (statusType === 'extracted') {
+          statusLabel = '🤖 Extracted';
+          pillClass = 'pill-extracted';
+        } else if (statusType === 'suggested') {
+          statusLabel = '💡 Suggested';
+          pillClass = 'pill-suggested';
+        } else {
+          statusLabel = '💡 Preset';
+          pillClass = 'pill-preset';
+        }
+      } else {
+        if (isRequired) {
+          missingCount++;
+          displayValue = '<span class="missing-val">Not provided yet</span>';
+          statusLabel = '⏳ Missing';
+          pillClass = 'pill-missing';
+        } else {
+          displayValue = '<span class="missing-val">Optional / Default</span>';
+          statusLabel = '💡 Optional';
+          pillClass = 'pill-preset';
+        }
+      }
+
+      // Lookup label in fieldRegistry if available
+      let label = f.label;
+      const regDef = (fieldRegistry || []).find(rf => rf.key === f.key);
+      if (regDef && regDef.label) {
+        label = regDef.label;
+      }
+
+      visibleRows.push({
+        key: f.key,
+        label: label,
+        displayValue: displayValue,
+        hasValue: hasValue,
+        isRequired: isRequired,
+        statusType: statusType,
+        statusLabel: statusLabel,
+        pillClass: pillClass
+      });
+    });
+
+    return {
+      id: secConfig.id,
+      title: secConfig.title,
+      icon: secConfig.icon,
+      rows: visibleRows,
+      capturedCount: capturedCount,
+      missingCount: missingCount
+    };
+  });
+
+  // Calculate dynamic totals
+  const totalCaptured = sectionsData.reduce((sum, s) => sum + s.capturedCount, 0);
+  const totalMissing = sectionsData.reduce((sum, s) => sum + s.missingCount, 0);
+
+  // 1. Update Top Status Bar
+  if (statusTextEl) {
+    if (totalMissing === 0 && totalCaptured > 0) {
+      statusTextEl.textContent = '✓ All required details captured · Ready to generate';
+    } else if (totalCaptured === 0) {
+      statusTextEl.textContent = `0 details captured · ${totalMissing} need your input`;
     } else {
-      badgeEl.className = 'readiness-badge pending';
-      badgeTextEl.textContent = `${readiness.missing_count} Remaining`;
+      const itemWord = totalMissing === 1 ? 'item needs' : 'items need';
+      statusTextEl.textContent = `${totalCaptured} details captured · ${totalMissing} ${itemWord} your input`;
     }
   }
 
-  // Render Required Cards
-  if (reqGrid) {
-    reqGrid.innerHTML = '';
-
-    // 1. Completed required
-    (readiness.required_completed || []).forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'summary-card confirmed';
-      card.innerHTML = `
-        <div class="summary-card-head"><span>${item.label}</span><span style="color:#34d399;">✓ Verified</span></div>
-        <div class="summary-card-val">${formatFieldValue(item.key, item.value)}</div>
-      `;
-      reqGrid.appendChild(card);
-    });
-
-    // 2. Extracted (Needs Confirmation)
-    (readiness.required_needs_confirmation || []).forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'summary-card';
-      card.style.borderColor = 'rgba(139, 92, 246, 0.4)';
-      card.innerHTML = `
-        <div class="summary-card-head"><span>${item.label}</span><span style="color:#c084fc;">🤖 Extracted</span></div>
-        <div class="summary-card-val">${formatFieldValue(item.key, item.value)}</div>
-        <div style="margin-top:6px; display:flex; gap:6px;">
-          <button type="button" class="studio-btn studio-btn-primary" style="padding:4px 10px; font-size:11px;" onclick="confirmSingleField('${item.key}')">Confirm ✓</button>
-        </div>
-      `;
-      reqGrid.appendChild(card);
-    });
-
-    // 3. Missing required
-    (readiness.required_missing || []).forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'summary-card missing';
-      card.innerHTML = `
-        <div class="summary-card-head"><span>${item.label}</span><span style="color:#f87171;">⏳ Missing</span></div>
-        <div class="summary-card-val missing-text">Not provided yet</div>
-      `;
-      reqGrid.appendChild(card);
-    });
+  if (statusDotEl) {
+    statusDotEl.classList.toggle('ready', totalMissing === 0 && totalCaptured > 0);
   }
 
-  // Render Recommended Cards
-  if (recGrid) {
-    recGrid.innerHTML = '';
-    (readiness.recommended_status || []).forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'summary-card';
-      const valStr = item.value ? formatFieldValue(item.key, item.value) : '<span style="color:var(--studio-text-dim); font-style:italic;">Default / Optional</span>';
-      card.innerHTML = `
-        <div class="summary-card-head"><span>${item.label}</span><span style="color:#94a3b8;">💡 Preset</span></div>
-        <div class="summary-card-val">${valStr}</div>
+  if (statusBadgeEl && statusBadgeTextEl) {
+    if (readiness.ready_for_generation || (totalMissing === 0 && totalCaptured > 0)) {
+      statusBadgeEl.className = 'captured-status-badge';
+      statusBadgeTextEl.textContent = '✓ Ready to Generate';
+    } else if (readiness.ready_for_review) {
+      statusBadgeEl.className = 'captured-status-badge pending';
+      statusBadgeTextEl.textContent = 'Ready for Review';
+    } else {
+      statusBadgeEl.className = 'captured-status-badge pending';
+      statusBadgeTextEl.textContent = totalMissing > 0 ? `${totalMissing} Remaining` : 'In Progress';
+    }
+  }
+
+  // 2. Select default expanded section if none chosen yet
+  if (window.expandedCapturedSections.size === 0) {
+    let defaultId = 'owner';
+    const focusArea = (window.lastNextInteraction?.focus_area || '').toLowerCase();
+    if (focusArea.includes('owner')) defaultId = 'owner';
+    else if (focusArea.includes('tenant')) defaultId = 'tenant';
+    else if (focusArea.includes('property') || focusArea.includes('address')) defaultId = 'property';
+    else if (focusArea.includes('financial') || focusArea.includes('rent') || focusArea.includes('deposit')) defaultId = 'financial';
+    else if (focusArea.includes('date') || focusArea.includes('tenure')) defaultId = 'dates';
+    else {
+      const firstIncomplete = sectionsData.find(s => s.missingCount > 0);
+      if (firstIncomplete) defaultId = firstIncomplete.id;
+    }
+    window.expandedCapturedSections.add(defaultId);
+  }
+
+  // 3. Render 5 Collapsible Accordion Sections
+  if (sectionsListEl) {
+    sectionsListEl.innerHTML = '';
+
+    sectionsData.forEach(sec => {
+      const isOpen = window.expandedCapturedSections.has(sec.id);
+
+      // Pill text
+      let pillHtml = '';
+      if (sec.missingCount === 0 && sec.capturedCount > 0) {
+        pillHtml = `<span class="captured-count-pill complete">✓ ${sec.capturedCount} details captured</span>`;
+      } else if (sec.missingCount > 0) {
+        const capPrefix = sec.capturedCount > 0 ? `✓ ${sec.capturedCount} captured · ` : '';
+        pillHtml = `<span class="captured-count-pill incomplete">${capPrefix}⏳ ${sec.missingCount} missing</span>`;
+      } else {
+        pillHtml = `<span class="captured-count-pill empty">⏳ Details needed</span>`;
+      }
+
+      // Accordion container
+      const acc = document.createElement('div');
+      acc.className = `captured-accordion ${isOpen ? 'open' : ''}`;
+      acc.id = `capturedAccordion_${sec.id}`;
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'captured-accordion-header';
+      header.onclick = () => toggleCapturedSection(sec.id);
+      header.innerHTML = `
+        <div class="captured-header-left">
+          <span class="captured-section-icon">${sec.icon}</span>
+          <span class="captured-section-title">${sec.title}</span>
+        </div>
+        <div class="captured-header-right">
+          ${pillHtml}
+          <i data-lucide="chevron-down" class="captured-chevron"></i>
+        </div>
       `;
-      recGrid.appendChild(card);
+
+      // Body (High-Density Rows)
+      const body = document.createElement('div');
+      body.className = 'captured-accordion-body';
+
+      const table = document.createElement('div');
+      table.className = 'captured-rows-table';
+
+      sec.rows.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'captured-row';
+
+        row.innerHTML = `
+          <div class="captured-row-label">${escapeHtml(r.label)}</div>
+          <div class="captured-row-val-wrap">
+            <div class="captured-row-val">${r.displayValue}</div>
+            <div class="captured-row-status">
+              <span class="captured-status-pill ${r.pillClass}">${r.statusLabel}</span>
+            </div>
+          </div>
+        `;
+        table.appendChild(row);
+      });
+
+      body.appendChild(table);
+      acc.appendChild(header);
+      acc.appendChild(body);
+      sectionsListEl.appendChild(acc);
     });
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 }
 

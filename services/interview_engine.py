@@ -6,10 +6,11 @@ Evaluates scenario-based required/recommended/conditional fields, calculates rea
 detects dependencies, and computes deterministic next questions and suggestion chips.
 """
 
+import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from clauses.formatters import num_to_words, _safe_int
+from clauses.formatters import num_to_words, _safe_int, format_indian_currency
 from field_registry import FIELD_REGISTRY
 from services.agreement_state import AgreementState, FieldEntry, FieldStatus, ProvenanceSource
 
@@ -52,8 +53,8 @@ class InterviewEngine:
             "owner1_careofname": {"category": FieldCategory.REQUIRED, "label": "Owner Father / Husband Name", "priority": 12},
             "owner1_address": {"category": FieldCategory.REQUIRED, "label": "Owner Permanent Address", "priority": 13},
             "owner1_occupation": {"category": FieldCategory.REQUIRED, "label": "Owner Occupation", "priority": 14},
-            "owner1_phone": {"category": FieldCategory.REQUIRED, "label": "Owner Mobile Number", "priority": 15},
-            "owner1_email": {"category": FieldCategory.REQUIRED, "label": "Owner Email ID", "priority": 16},
+            "owner1_phone": {"category": FieldCategory.OPTIONAL, "label": "Owner Mobile Number", "priority": 15},
+            "owner1_email": {"category": FieldCategory.OPTIONAL, "label": "Owner Email ID", "priority": 16},
 
             # Tenant Party Details (Sequential Steps)
             "tenant1_name": {"category": FieldCategory.REQUIRED, "label": "Tenant Full Name", "priority": 17},
@@ -61,8 +62,8 @@ class InterviewEngine:
             "tenant1_careofname": {"category": FieldCategory.REQUIRED, "label": "Tenant Father / Husband Name", "priority": 19},
             "tenant1_address": {"category": FieldCategory.REQUIRED, "label": "Tenant Permanent Address", "priority": 20},
             "tenant1_occupation": {"category": FieldCategory.REQUIRED, "label": "Tenant Occupation", "priority": 21},
-            "tenant1_phone": {"category": FieldCategory.REQUIRED, "label": "Tenant Mobile Number", "priority": 22},
-            "tenant1_email": {"category": FieldCategory.REQUIRED, "label": "Tenant Email ID", "priority": 23},
+            "tenant1_phone": {"category": FieldCategory.OPTIONAL, "label": "Tenant Mobile Number", "priority": 22},
+            "tenant1_email": {"category": FieldCategory.OPTIONAL, "label": "Tenant Email ID", "priority": 23},
 
             # Property
             "property_address": {"category": FieldCategory.REQUIRED, "label": "Rented Property Address", "priority": 20},
@@ -78,11 +79,12 @@ class InterviewEngine:
             # Recommended Standard Terms
             "notice_period": {"category": FieldCategory.RECOMMENDED, "label": "Notice Period", "priority": 50, "default": "1 Month"},
             "maintenance": {"category": FieldCategory.RECOMMENDED, "label": "Society Maintenance", "priority": 52, "default": "Including"},
-            "increase_percent": {"category": FieldCategory.RECOMMENDED, "label": "Renewal Rent Escalation", "priority": 54, "default": "5"},
+            "rent_increase_type": {"category": FieldCategory.RECOMMENDED, "label": "Rent Increase Type", "priority": 53, "default": "% of Rent"},
+            "increase_percent": {"category": FieldCategory.RECOMMENDED, "label": "Rent Increase Value", "priority": 54, "default": "5%"},
 
             # Conditional / Context-Specific
             "lockin_months": {"category": FieldCategory.CONDITIONAL, "label": "Lock-in Period (Months)", "priority": 60, "parent": "lockin"},
-            "penalty_deduction": {"category": FieldCategory.CONDITIONAL, "label": "Early Exit Penalty (Days Rent)", "priority": 62, "parent": "lockin_months"},
+            "penalty_deduction": {"category": FieldCategory.CONDITIONAL, "label": "Early Exit Penalty (Days Rent)", "priority": 62, "parent": "lockin_months", "default": "30"},
             "tenant_poc": {"category": FieldCategory.CONDITIONAL, "label": "Bachelor Group SPOC", "priority": 70, "parent": "scenario"},
             "annexure": {"category": FieldCategory.CONDITIONAL, "label": "Fittings & Fixtures Annexure", "priority": 80},
         }
@@ -326,7 +328,7 @@ class InterviewEngine:
                     "question_text": "What is the owner's **permanent address**?",
                     "suggestion_chips": [],
                 }
-            if "owner1_occupation" in missing_keys or "owner1_phone" in missing_keys or "owner1_email" in missing_keys:
+            if not state.get_value("owner1_occupation"):
                 o_name = state.get_value("owner1_name") or "Owner"
                 return {
                     "type": "party_profile",
@@ -459,8 +461,8 @@ class InterviewEngine:
                     "suggestion_chips": [],
                 }
             # Both parties' profile details together (if both parties are known or entering profiles)
-            owner_profile_missing = any(k in missing_keys for k in ["owner1_occupation", "owner1_phone", "owner1_email"])
-            tenant_profile_missing = any(k in missing_keys for k in ["tenant1_occupation", "tenant1_phone", "tenant1_email"])
+            owner_profile_missing = not state.get_value("owner1_occupation")
+            tenant_profile_missing = not state.get_value("tenant1_occupation")
 
             if (owner_profile_missing or tenant_profile_missing) and (state.get_value("tenant1_name") or "tenant1_name" not in missing_keys):
                 o_name = state.get_value("owner1_name") or "Owner"
@@ -539,6 +541,59 @@ class InterviewEngine:
                     {"label": "Including Maintenance", "value": "Maintenance is included in rent"},
                 ],
             }
+
+        # 3.2. Rent Escalation Type
+        if not state.get_value("rent_increase_type") and not state.get_value("increase_percent"):
+            return {
+                "type": "question",
+                "focus_area": "rent_increase_type",
+                "target_fields": ["rent_increase_type"],
+                "question_text": "How would you like the annual rent increase to be calculated?",
+                "suggestion_chips": [
+                    {"label": "📈 % of Rent", "value": "% of Rent"},
+                    {"label": "💵 Fixed Increase", "value": "Fixed Increase"},
+                ],
+            }
+
+        # 3.3. Rent Escalation Value
+        if not state.get_value("increase_percent"):
+            inc_type = (state.get_value("rent_increase_type") or "% of rent").lower()
+            if "fixed" in inc_type:
+                # Dynamic calculation based on monthly rent: 5%, 7.5%, 10%
+                rent_val = state.get_value("monthly_rent")
+                rent_num = 20000
+                try:
+                    rent_num = int(str(rent_val).replace(",", "").replace("₹", "").strip())
+                except Exception:
+                    pass
+
+                v5 = int(round((rent_num * 0.05) / 100) * 100)
+                v75 = int(round((rent_num * 0.075) / 100) * 100)
+                v10 = int(round((rent_num * 0.10) / 100) * 100)
+
+                return {
+                    "type": "question",
+                    "focus_area": "rent_increase_value",
+                    "target_fields": ["increase_percent"],
+                    "question_text": f"What is the fixed annual rent increase amount? (Suggestions based on ₹{rent_num:,} rent)",
+                    "suggestion_chips": [
+                        {"label": f"₹{v5:,} (5%)", "value": f"₹{v5:,} Fixed Increase"},
+                        {"label": f"₹{v75:,} (7.5%)", "value": f"₹{v75:,} Fixed Increase"},
+                        {"label": f"₹{v10:,} (10%)", "value": f"₹{v10:,} Fixed Increase"},
+                    ],
+                }
+            else:
+                return {
+                    "type": "question",
+                    "focus_area": "rent_increase_value",
+                    "target_fields": ["increase_percent"],
+                    "question_text": "What percentage should rent increase on annual renewal?",
+                    "suggestion_chips": [
+                        {"label": "5%", "value": "5%"},
+                        {"label": "5% - 10% (Most Used)", "value": "5-10%"},
+                        {"label": "10%", "value": "10%"},
+                    ],
+                }
 
         # 4. Missing Start Date
         if "agreement_start_date" in missing_keys:
@@ -666,8 +721,39 @@ class InterviewEngine:
                 except ValueError:
                     end_dt = datetime(year, month, 28)
                 end_str = end_dt.strftime("%d-%m-%Y")
-                state.set_field("agreement_end_date", end_str, source=ProvenanceSource.SYSTEM_CALCULATED)
-                calculated.append("agreement_end_date")
+                if not state.get_value("agreement_end_date"):
+                    state.set_field("agreement_end_date", end_str, source=ProvenanceSource.SYSTEM_CALCULATED)
+                    calculated.append("agreement_end_date")
+
+        # 4. Auto-calculate Lock-in End Date & Penalty Deduction
+        lockin_months_val = state.get_value("lockin_months")
+        if lockin_months_val and str(lockin_months_val).strip() not in ("0", ""):
+            try:
+                l_months = int(re.sub(r'[^\d]', '', str(lockin_months_val)))
+            except Exception:
+                l_months = 0
+
+            if l_months > 0:
+                state.set_field("lockin", "Y", source=ProvenanceSource.SYSTEM_CALCULATED)
+                if start_date_str:
+                    parsed_start = cls._parse_flexible_date(start_date_str)
+                    if parsed_start:
+                        year = parsed_start.year
+                        month = parsed_start.month + l_months
+                        if month > 12:
+                            year += (month - 1) // 12
+                            month = ((month - 1) % 12) + 1
+                        try:
+                            l_end_dt = datetime(year, month, parsed_start.day) - timedelta(days=1)
+                        except ValueError:
+                            l_end_dt = datetime(year, month, 28)
+                        l_end_str = l_end_dt.strftime("%d-%m-%Y")
+                        state.set_field("lockin_end_date", l_end_str, source=ProvenanceSource.SYSTEM_CALCULATED)
+                        calculated.append("lockin_end_date")
+
+                if not state.get_value("penalty_deduction"):
+                    state.set_field("penalty_deduction", "30", source=ProvenanceSource.SYSTEM_CALCULATED)
+                    calculated.append("penalty_deduction")
 
         return calculated
 

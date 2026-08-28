@@ -53,7 +53,7 @@ _OCCUPATION_OPTIONS = [
     "SELF EMPLOYED",
 ]
 _CAREOF_OPTIONS = ["Father Name", "Husband Name"]
-_PREFIX_OPTIONS = ["Mr.", "Mrs.", "Miss.", "Dr."]
+_PREFIX_OPTIONS = ["Mr.", "Ms.", "Mrs.", "Miss.", "Dr."]
 _MAINTENANCE_OPTIONS = ["Including", "Excluding"]
 _NOTICE_OPTIONS = ["1 Month", "2 Months", "3 Months"]
 _AGREEMENT_TYPE_OPTIONS = ["Simple", "Leave&License"]
@@ -142,7 +142,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
            hint="Number of months tenant must stay"),
 
     _field("lockin_end_date",     "Lock-in End Date",     "🔓", "date",     "agreement_dates",
-           "{lockin_end_date}",     "agreement", readonly=True,
+           "{lockin_end_date}",     "agreement", required=False,
            auto_calc="lockin_end_date",
            hint="Auto-calculated from start date + lock-in months"),
 
@@ -175,11 +175,11 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
            "{property_area}",  "property", required=False),
 
     # ── FINANCIAL ────────────────────────────────────────────────────────────
-    _field("monthly_rent",        "Rent Amount",               "💰", "text",     "financial",
+    _field("monthly_rent",        "Rent",                      "💰", "text",     "financial",
            "{monthly_rent}",       "agreement",
            auto_calc="format_indian"),
 
-    _field("monthly_rent_words",  "Rent Amount in Words",      "✍️",  "text",     "financial",
+    _field("monthly_rent_words",  "Rent in Words",             "✍️",  "text",     "financial",
            "{monthly_rent_words}", "agreement", readonly=True, required=False, wide=True,
            auto_calc="words_rent"),
 
@@ -194,7 +194,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
            "{increase_percent}",   "agreement", required=False,
            hint="e.g. 5% or 1500 (Fixed). Appends % automatically for % type"),
 
-    _field("security_deposit",    "Security Deposit Amount",   "💎", "text",     "financial",
+    _field("security_deposit",    "Security Deposit",          "💎", "text",     "financial",
            "{security_deposit}",   "agreement",
            auto_calc="format_indian",
            hint="Auto-calculated as 2× rent. Override if needed"),
@@ -203,7 +203,7 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
            "{security_deposit_words}","agreement", readonly=True, required=False, wide=True,
            auto_calc="words_deposit"),
 
-    _field("notice_period",    "Notice Period",            "⏳", "select",   "financial",
+    _field("notice_period",    "Notice Period",            "⏳", "select",   "dates",
            "{notice_period}",  "agreement", options=_NOTICE_OPTIONS),
 
     _field("annexure",         "Annexure",                 "📎", "textarea", "financial",

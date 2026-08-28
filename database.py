@@ -15,9 +15,11 @@ At 1000 concurrent users hitting Flask/Gunicorn with 4 gevent workers:
   - Tune DB_POOL_MAX to stay within your Postgres max_connections limit
 """
 
+import os
+import json
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, execute_values
 import logging
 import threading
 from config import Config
@@ -106,6 +108,36 @@ def close_pool() -> None:
 # Public helpers — use these instead of raw psycopg2 calls
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _seed_pincodes_if_needed(cur, conn) -> None:
+    """Populates agreement.agr_pincodes from data/pincodes_india.json if empty."""
+    try:
+        cur.execute("SELECT COUNT(*) FROM agreement.agr_pincodes;")
+        count = cur.fetchone()[0]
+        if count == 0:
+            json_path = os.path.join(os.path.dirname(__file__), "data", "pincodes_india.json")
+            if os.path.exists(json_path):
+                with open(json_path, "r", encoding="utf-8") as f:
+                    pincodes_data = json.load(f)
+                rows = [
+                    (pin, v.get("city"), v.get("district"), v.get("division"), v.get("state"), v.get("office"))
+                    for pin, v in pincodes_data.items()
+                ]
+                execute_values(
+                    cur,
+                    """
+                    INSERT INTO agreement.agr_pincodes (pincode, city, district, division, state, office)
+                    VALUES %s
+                    ON CONFLICT (pincode) DO NOTHING
+                    """,
+                    rows
+                )
+                conn.commit()
+                logger.info(f"Successfully seeded {len(rows)} All-India PIN codes into PostgreSQL.")
+    except Exception as e:
+        logger.warning(f"Pincode auto-seeding notice: {e}")
+        conn.rollback()
+
+
 def init_db() -> bool:
     """
     Execute schema.sql to create all agr_* tables if they don't exist.
@@ -120,6 +152,7 @@ def init_db() -> bool:
             with open("schema.sql", "r", encoding="utf-8") as f:
                 sql_script = f.read()
             cur.execute(sql_script)
+            _seed_pincodes_if_needed(cur, conn)
         conn.commit()
         logger.info("DB schema initialised successfully.")
         return True

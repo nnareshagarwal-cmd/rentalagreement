@@ -151,6 +151,19 @@ CREATE TABLE IF NOT EXISTS agreement.agr_audit_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 10. India PIN Code Master Table
+CREATE TABLE IF NOT EXISTS agreement.agr_pincodes (
+    pincode VARCHAR(6) PRIMARY KEY,
+    city VARCHAR(100) NOT NULL,
+    district VARCHAR(100),
+    division VARCHAR(100),
+    state VARCHAR(100) NOT NULL,
+    office VARCHAR(150),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_agr_pincodes_pincode ON agreement.agr_pincodes(pincode);
+
 -- =========================================================
 -- Seed Default Data (Stamp Rates & Templates)
 -- =========================================================

@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const parsed = JSON.parse(savedDraft);
       if (parsed && parsed.fields && Object.keys(parsed.fields).length > 0) {
         currentAgreementState = parsed;
+        _lastAppliedFields = JSON.parse(JSON.stringify(currentAgreementState.fields || {}));
       }
     } catch (e) {
       console.warn('[Studio] Failed to parse saved draft:', e);
@@ -322,10 +323,17 @@ function renderDropzoneInner(role, isVerified) {
   const roleIcon = isOwner ? '🏠' : '👤';
 
   if (isVerified) {
-    const name = currentAgreementState.fields?.[`${prefix}name`]?.value || '';
-    const age = currentAgreementState.fields?.[`${prefix}age`]?.value || '';
+    const nameRaw = currentAgreementState.fields?.[`${prefix}name`]?.value || '';
+    let namePrefix = (currentAgreementState.fields?.[`${prefix}prefix`]?.value || '').trim();
     const careof = currentAgreementState.fields?.[`${prefix}careof`]?.value || 'Father Name';
-    const careofname = currentAgreementState.fields?.[`${prefix}careofname`]?.value || '';
+    if (!namePrefix) {
+      namePrefix = careof === 'Husband Name' ? 'Ms.' : 'Mr.';
+    }
+    const name = (namePrefix && !nameRaw.startsWith(namePrefix)) ? `${namePrefix} ${nameRaw}` : nameRaw;
+    const age = currentAgreementState.fields?.[`${prefix}age`]?.value || '';
+    const careofnameRaw = currentAgreementState.fields?.[`${prefix}careofname`]?.value || '';
+    const careofnamePrefix = (currentAgreementState.fields?.[`${prefix}careofname_prefix`]?.value || 'Mr.').trim();
+    const careofname = (careofnamePrefix && !careofnameRaw.startsWith(careofnamePrefix)) ? `${careofnamePrefix} ${careofnameRaw}` : careofnameRaw;
     const address = currentAgreementState.fields?.[`${prefix}address`]?.value || '';
 
     const relTag = careof === 'Husband Name' ? 'W/o' : 'S/o';
@@ -426,6 +434,14 @@ async function processKickstartFile(role, file) {
       if (data.full_address) {
         currentAgreementState.fields[`${prefix}address`] = { value: data.full_address, source: 'aadhaar_ocr', status: 'confirmed' };
       }
+      // Set name honorific prefix (Mr./Ms.) derived from Aadhaar gender
+      if (data.prefix) {
+        currentAgreementState.fields[`${prefix}prefix`] = { value: data.prefix, source: 'aadhaar_ocr', status: 'confirmed' };
+      }
+      // Set careofname prefix — father/husband is always "Mr."
+      if (data.careofname_prefix) {
+        currentAgreementState.fields[`${prefix}careofname_prefix`] = { value: data.careofname_prefix, source: 'aadhaar_ocr', status: 'confirmed' };
+      }
 
       // Re-render dropzone state
       if (dropzone) {
@@ -454,34 +470,55 @@ async function processKickstartFile(role, file) {
       const hasOwner = Boolean(currentAgreementState.fields?.owner1_name?.value);
       const hasTenant = Boolean(currentAgreementState.fields?.tenant1_name?.value);
 
+      const isFemale = data.prefix === 'Ms.' || 
+        (data.gender && String(data.gender).toUpperCase() === 'FEMALE') ||
+        (data.relation_type && (String(data.relation_type).toUpperCase().includes('D/O') || String(data.relation_type).toUpperCase().includes('W/O') || String(data.relation_type).toUpperCase().includes('C/O')));
+
       if (hasOwner && hasTenant) {
         // Both parties are verified!
-        const ownerName = currentAgreementState.fields.owner1_name.value;
-        const tenantName = currentAgreementState.fields.tenant1_name.value;
+        const ownerNameRaw = currentAgreementState.fields.owner1_name.value;
+        const ownerPfx = (currentAgreementState.fields.owner1_prefix?.value || '').trim();
+        const ownerName = (ownerPfx && !ownerNameRaw.startsWith(ownerPfx)) ? `${ownerPfx} ${ownerNameRaw}` : ownerNameRaw;
+        const tenantNameRaw = currentAgreementState.fields.tenant1_name.value;
+        const tenantPfx = (currentAgreementState.fields.tenant1_prefix?.value || '').trim();
+        const tenantName = (tenantPfx && !tenantNameRaw.startsWith(tenantPfx)) ? `${tenantPfx} ${tenantNameRaw}` : tenantNameRaw;
 
         // Bubble 1: Celebration receipt for both
         appendChatBubble('assistant', `🎉 **Both Landlord & Tenant verified from official Aadhaar!**\n\n• 🏠 **Owner:** ${escapeHtml(ownerName)}\n• 👤 **Tenant:** ${escapeHtml(tenantName)}`);
 
-        // Bubble 2: Combined Dual Profile & Contact Card
-        appendChatBubble(
-          'assistant',
-          '**Owner & Tenant Details**',
-          [],
-          null,
-          {
-            type: 'party_profile',
-            party_role: 'dual',
-            owner_name: ownerName,
-            tenant_name: tenantName,
-            occupations: ['PRIVATE EMPLOYEE', 'BUSINESS']
-          }
-        );
+        if (isFemale && data.relation_name) {
+          // Ask female Father/Husband clarification FIRST before presenting the profile form
+          const displayName = data.prefix ? `${data.prefix} ${data.full_name}` : data.full_name;
+          appendChatBubble(
+            'assistant',
+            `The name **${escapeHtml(data.relation_name)}** was captured from Aadhaar for ${escapeHtml(displayName)}. Is this your **Father's Name** or **Husband's Name**?`,
+            [
+              { label: "👨 Father's Name", value: 'Father Name', action: 'set_careof_relation', role: role, trigger_profile: true },
+              { label: "💑 Husband's Name", value: 'Husband Name', action: 'set_careof_relation', role: role, trigger_profile: true }
+            ]
+          );
+        } else {
+          // No female / no pending question -> show profile & contact card immediately
+          showDualPartyProfileCard();
+        }
       } else {
         const nextRole = role === 'owner' ? 'Tenant' : 'Owner';
         const roleTitle = role === 'owner' ? 'Landlord / Owner' : 'Tenant';
         const addrSnippet = data.full_address ? `\n\n📍 **Permanent Address:** ${escapeHtml(data.full_address)}` : '';
+        const displayName = data.prefix ? `${data.prefix} ${data.full_name}` : data.full_name;
 
-        appendChatBubble('assistant', `✨ **${roleTitle} ID verified!** (${escapeHtml(data.full_name)})${addrSnippet}\n\nPlease upload the **${nextRole} Aadhaar ID** on the card above:`);
+        if (isFemale && data.relation_name) {
+          appendChatBubble(
+            'assistant',
+            `✨ **${roleTitle} ID verified!** (${escapeHtml(displayName)})${addrSnippet}\n\nThe name **${escapeHtml(data.relation_name)}** was captured from Aadhaar. Is this your **Father's Name** or **Husband's Name**?`,
+            [
+              { label: "👨 Father's Name", value: 'Father Name', action: 'set_careof_relation', role: role },
+              { label: "💑 Husband's Name", value: 'Husband Name', action: 'set_careof_relation', role: role }
+            ]
+          );
+        } else {
+          appendChatBubble('assistant', `✨ **${roleTitle} ID verified!** (${escapeHtml(displayName)})${addrSnippet}\n\nPlease upload the **${nextRole} Aadhaar ID** on the card above:`);
+        }
       }
     } else {
       if (dropzone) {
@@ -495,8 +532,8 @@ async function processKickstartFile(role, file) {
       dropzone.classList.remove('loading');
       dropzone.innerHTML = renderDropzoneInner(role, false);
     }
-    console.warn('[Kickstart OCR error]', err);
-    alert('⚠️ OCR processing error. Please check your internet connection.');
+    console.error('[Kickstart OCR error]', err);
+    alert('⚠️ OCR processing error: ' + (err.message || 'Please check your connection and retry.'));
   }
 }
 
@@ -553,10 +590,12 @@ function renderPropertySearchCard() {
   `;
 
   container.appendChild(card);
-  container.scrollTop = container.scrollHeight;
+  setTimeout(() => {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 60);
 
   // Wire up the society search
-  setTimeout(() => setupPropertySocietySearch(), 50);
+  setTimeout(() => setupPropertySocietySearch(), 100);
 }
 
 // State for the property search card
@@ -571,6 +610,11 @@ function setupPropertySocietySearch() {
   if (!input || !resultsList) return;
 
   input.focus();
+
+  input.addEventListener('focus', () => {
+    const card = document.getElementById('propertySearchCard');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 
   input.addEventListener('input', () => {
     clearTimeout(_propertySocietyDebounce);
@@ -614,6 +658,12 @@ function setupPropertySocietySearch() {
           resultsList.appendChild(row);
         });
         resultsList.style.display = 'block';
+
+        // Scroll card and its dropdown cleanly into center view so all suggestions are immediately visible
+        setTimeout(() => {
+          const card = document.getElementById('propertySearchCard');
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
       } catch (err) {
         console.warn('[PropertySearch] Error:', err);
       }
@@ -761,9 +811,11 @@ function showPropertyFlatInput() {
     });
   }
 
-  // Scroll to bottom
-  const chatContainer = document.getElementById('studioChatMessages');
-  if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+  // Scroll card cleanly into center view
+  setTimeout(() => {
+    const card = document.getElementById('propertySearchCard');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 60);
 }
 
 async function confirmPropertyAddress() {
@@ -887,11 +939,12 @@ function applyStateResponse(data) {
   if (!data) return;
 
   let lastChangedSectionId = null;
+  let changedKeys = [];
 
   if (data.agreement_state) {
     // Auto-expand accordion sections that contain newly added or updated fields
     const prevFields = Object.keys(_lastAppliedFields).length > 0 ? _lastAppliedFields : currentAgreementState?.fields;
-    const changedKeys = getChangedFieldKeys(prevFields, data.agreement_state?.fields);
+    changedKeys = getChangedFieldKeys(prevFields, data.agreement_state?.fields);
     if (changedKeys.length > 0 && typeof CAPTURED_SECTIONS_CONFIG !== 'undefined') {
       if (!window.expandedCapturedSections) {
         window.expandedCapturedSections = new Set();
@@ -917,6 +970,28 @@ function applyStateResponse(data) {
   if (data.readiness) {
     _lastReadiness = data.readiness;
     updateReadinessUI(data.readiness);
+  }
+
+  // Trigger subtle visual pulse / glow on newly added or updated field rows (~2.5s)
+  if (changedKeys && changedKeys.length > 0) {
+    setTimeout(() => {
+      changedKeys.forEach(k => {
+        let rowEl = document.querySelector(`.captured-row[data-field-key="${k}"]`);
+        if (!rowEl && k === 'flat_no') {
+          rowEl = document.querySelector(`.captured-row[data-field-key="property_no"]`);
+        } else if (!rowEl && k === 'property_no') {
+          rowEl = document.querySelector(`.captured-row[data-field-key="flat_no"]`);
+        }
+        if (rowEl) {
+          rowEl.classList.remove('row-updated');
+          void rowEl.offsetWidth; // Force reflow
+          rowEl.classList.add('row-updated');
+          setTimeout(() => {
+            rowEl.classList.remove('row-updated');
+          }, 2600);
+        }
+      });
+    }, 50);
   }
 
   // Smoothly scroll the right panel to the newly updated accordion section
@@ -985,7 +1060,7 @@ const CAPTURED_SECTIONS_CONFIG = [
       { key: 'owner1_careofname', label: 'Father / Husband Name', required: true },
       { key: 'owner1_address', label: 'Permanent Address', required: true },
       { key: 'owner1_occupation', label: 'Occupation', required: true },
-      { key: 'owner1_phone', label: 'Mobile Number', required: true },
+      { key: 'owner1_phone', label: 'Mobile Number', required: false },
       { key: 'owner1_email', label: 'Email ID', required: false },
       { key: 'owner2_name', label: 'Owner 2 Full Name', required: false, multiParty: 2 },
       { key: 'owner2_age', label: 'Owner 2 Age', required: false, multiParty: 2 },
@@ -1006,7 +1081,7 @@ const CAPTURED_SECTIONS_CONFIG = [
       { key: 'tenant1_careofname', label: 'Father / Husband Name', required: true },
       { key: 'tenant1_address', label: 'Permanent Address', required: true },
       { key: 'tenant1_occupation', label: 'Occupation', required: true },
-      { key: 'tenant1_phone', label: 'Mobile Number', required: true },
+      { key: 'tenant1_phone', label: 'Mobile Number', required: false },
       { key: 'tenant1_email', label: 'Email ID', required: false },
       { key: 'tenant_poc', label: 'SPOC / Point of Contact', required: false, condition: 'bachelor' },
       { key: 'tenant_gender', label: 'Tenant Gender', required: false, condition: 'bachelor' },
@@ -1030,31 +1105,29 @@ const CAPTURED_SECTIONS_CONFIG = [
     ]
   },
   {
+    id: 'financial',
+    title: 'Financial Details',
+    icon: '💰',
+    fields: [
+      { key: 'monthly_rent', label: 'Rent', required: true },
+      { key: 'security_deposit', label: 'Security Deposit', required: true },
+      { key: 'maintenance', label: 'Maintenance', required: true },
+      { key: 'rent_increase_type', label: 'Rent Increase Type', required: false },
+      { key: 'increase_percent', label: 'Rent Increase Rate', required: false },
+      { key: 'annexure', label: 'Annexure / Custom Clauses', required: false },
+    ]
+  },
+  {
     id: 'dates',
     title: 'Agreement Dates & Tenure',
     icon: '📅',
     fields: [
       { key: 'agreement_start_date', label: 'Start Date', required: true },
       { key: 'agreement_end_date', label: 'End Date', required: true },
-      { key: 'agreement_date', label: 'Execution / Today\'s Date', required: false },
+      { key: 'notice_period', label: 'Notice Period', required: true },
       { key: 'lockin_months', label: 'Lock-in Months', required: false, condition: 'lockin' },
       { key: 'lockin_end_date', label: 'Lock-in End Date', required: false, condition: 'lockin' },
       { key: 'penalty_deduction', label: 'Lock-in Penalty (Days)', required: false, condition: 'lockin' },
-      { key: 'tenant_type', label: 'Tenant Type', required: false },
-    ]
-  },
-  {
-    id: 'financial',
-    title: 'Financial Details',
-    icon: '💰',
-    fields: [
-      { key: 'monthly_rent', label: 'Monthly Rent', required: true },
-      { key: 'security_deposit', label: 'Security Deposit', required: true },
-      { key: 'maintenance', label: 'Maintenance', required: true },
-      { key: 'notice_period', label: 'Notice Period', required: true },
-      { key: 'rent_increase_type', label: 'Rent Increase Type', required: false },
-      { key: 'increase_percent', label: 'Rent Increase Rate', required: false },
-      { key: 'annexure', label: 'Annexure / Custom Clauses', required: false },
     ]
   }
 ];
@@ -1178,6 +1251,24 @@ function updateReadinessUI(readiness) {
       const regDef = (fieldRegistry || []).find(rf => rf.key === f.key);
       if (regDef && regDef.label) {
         label = regDef.label;
+      }
+
+      // Dynamic single-line label for Father / Husband Name based on party state
+      const careofNameMatch = f.key.match(/^(owner|tenant)(\d*)_careofname$/);
+      if (careofNameMatch) {
+        const pRole = careofNameMatch[1]; // 'owner' or 'tenant'
+        const pIdx = careofNameMatch[2] || '1';
+        const roleTitle = pRole === 'owner' ? (pIdx === '1' ? 'Owner' : `Owner ${pIdx}`) : (pIdx === '1' ? 'Tenant' : `Tenant ${pIdx}`);
+        const careofVal = stateFields[`${pRole}${pIdx}_careof`]?.value;
+        const prefixVal = stateFields[`${pRole}${pIdx}_prefix`]?.value;
+
+        if (careofVal === 'Husband Name') {
+          label = `${roleTitle} Husband Name`;
+        } else if (careofVal === 'Father Name' || prefixVal === 'Mr.') {
+          label = `${roleTitle} Father Name`;
+        } else {
+          label = `${roleTitle} Father Name`;
+        }
       }
 
       const isEditable = !regDef || (!regDef.readonly && regDef.type !== 'hidden');
@@ -1341,6 +1432,73 @@ function updateReadinessUI(readiness) {
 }
 
 /**
+ * Helper date formatting and calculation utilities
+ */
+function toIsoDate(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  const ddmmyyyy = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (ddmmyyyy) {
+    const day = ddmmyyyy[1].padStart(2, '0');
+    const month = ddmmyyyy[2].padStart(2, '0');
+    const year = ddmmyyyy[3];
+    return `${year}-${month}-${day}`;
+  }
+  return s;
+}
+
+function fromIsoDate(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  const yyyymmdd = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (yyyymmdd) {
+    const year = yyyymmdd[1];
+    const month = yyyymmdd[2].padStart(2, '0');
+    const day = yyyymmdd[3].padStart(2, '0');
+    return `${day}-${month}-${year}`;
+  }
+  return s;
+}
+
+function parseDateDMY(dmyStr) {
+  if (!dmyStr) return null;
+  const s = String(dmyStr).trim();
+  const parts = s.split(/[-/]/);
+  if (parts.length === 3) {
+    let d, m, y;
+    if (parts[0].length === 4) {
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      d = parseInt(parts[2], 10);
+    } else {
+      d = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      y = parseInt(parts[2], 10);
+    }
+    const dt = new Date(y, m, d);
+    if (!isNaN(dt.getTime())) return { year: y, month: m + 1, day: d };
+  }
+  return null;
+}
+
+function addMonthsMinusOneDay(startDateStr, months) {
+  const p = parseDateDMY(startDateStr);
+  if (!p) return '';
+  let y = p.year;
+  let m = p.month + months;
+  if (m > 12) {
+    y += Math.floor((m - 1) / 12);
+    m = ((m - 1) % 12) + 1;
+  }
+  const dt = new Date(y, m - 1, p.day);
+  dt.setDate(dt.getDate() - 1);
+  const resDay = String(dt.getDate()).padStart(2, '0');
+  const resMonth = String(dt.getMonth() + 1).padStart(2, '0');
+  const resYear = dt.getFullYear();
+  return `${resDay}-${resMonth}-${resYear}`;
+}
+
+/**
  * Open inline edit mode for a field in the Captured Details inspector
  */
 function openInlineEdit(event, fieldKey) {
@@ -1365,6 +1523,7 @@ function openInlineEdit(event, fieldKey) {
   // Lookup field definition from fieldRegistry
   const regDef = (fieldRegistry || []).find(rf => rf.key === fieldKey) || {};
   const rawValue = (currentAgreementState.fields?.[fieldKey]?.value) || '';
+  const isDateField = regDef.type === 'date' || fieldKey.includes('date') || fieldKey.endsWith('_date');
 
   let inputHtml = '';
   if (regDef.type === 'select') {
@@ -1383,9 +1542,10 @@ function openInlineEdit(event, fieldKey) {
     inputHtml = `
       <textarea class="captured-inline-input textarea-input" id="inlineInput_${fieldKey}" rows="2" placeholder="Enter ${escapeHtml(regDef.label || fieldKey)}...">${escapeHtml(rawValue)}</textarea>
     `;
-  } else if (regDef.type === 'date') {
+  } else if (isDateField) {
+    const isoVal = toIsoDate(rawValue);
     inputHtml = `
-      <input type="date" class="captured-inline-input" id="inlineInput_${fieldKey}" value="${escapeHtml(rawValue)}" />
+      <input type="date" class="captured-inline-input date-input" id="inlineInput_${fieldKey}" value="${escapeHtml(isoVal)}" />
     `;
   } else {
     // text / number / currency / etc.
@@ -1407,7 +1567,13 @@ function openInlineEdit(event, fieldKey) {
   const inputEl = valWrap.querySelector('.captured-inline-input');
   if (inputEl) {
     inputEl.focus();
-    if (inputEl.select && regDef.type !== 'date' && regDef.type !== 'select') {
+    if (isDateField) {
+      try {
+        if (typeof inputEl.showPicker === 'function') {
+          inputEl.showPicker();
+        }
+      } catch (_) {}
+    } else if (inputEl.select && regDef.type !== 'select') {
       inputEl.select();
     }
 
@@ -1444,7 +1610,14 @@ function handleInlineSaveClick(fieldKey) {
  * Save inline edited value into shared state and sync with backend
  */
 async function saveInlineEdit(fieldKey, newValue) {
-  const trimmed = (newValue || '').trim();
+  let trimmed = (newValue || '').trim();
+
+  // If date field was edited via <input type="date">, convert YYYY-MM-DD to DD-MM-YYYY
+  const regDef = (fieldRegistry || []).find(rf => rf.key === fieldKey) || {};
+  const isDateField = regDef.type === 'date' || fieldKey.includes('date') || fieldKey.endsWith('_date');
+  if (isDateField && trimmed) {
+    trimmed = fromIsoDate(trimmed);
+  }
 
   if (!currentAgreementState.fields) {
     currentAgreementState.fields = {};
@@ -1461,6 +1634,116 @@ async function saveInlineEdit(fieldKey, newValue) {
     };
   } else {
     delete currentAgreementState.fields[fieldKey];
+  }
+
+  // 1. If Agreement Start Date is changed:
+  if (fieldKey === 'agreement_start_date' && trimmed) {
+    const tenureMonths = parseInt(currentAgreementState.fields.tenure_months?.value || '11', 10) || 11;
+    const calcEnd = addMonthsMinusOneDay(trimmed, tenureMonths);
+    if (calcEnd) {
+      currentAgreementState.fields.agreement_end_date = {
+        key: 'agreement_end_date',
+        value: calcEnd,
+        status: 'confirmed',
+        source: 'system_calculated',
+        confidence: 1.0,
+        confirmed_at: new Date().toISOString()
+      };
+    }
+
+    // Also update lock-in end date if lockin_months exists
+    const lockMonths = parseInt(currentAgreementState.fields.lockin_months?.value || '0', 10);
+    if (lockMonths > 0) {
+      const calcLockEnd = addMonthsMinusOneDay(trimmed, lockMonths);
+      if (calcLockEnd) {
+        currentAgreementState.fields.lockin_end_date = {
+          key: 'lockin_end_date',
+          value: calcLockEnd,
+          status: 'confirmed',
+          source: 'system_calculated',
+          confidence: 1.0,
+          confirmed_at: new Date().toISOString()
+        };
+      }
+      if (!currentAgreementState.fields.penalty_deduction?.value || currentAgreementState.fields.penalty_deduction.value === '0') {
+        currentAgreementState.fields.penalty_deduction = {
+          key: 'penalty_deduction',
+          value: '30',
+          status: 'confirmed',
+          source: 'system_calculated',
+          confidence: 1.0,
+          confirmed_at: new Date().toISOString()
+        };
+      }
+    }
+  }
+
+  // 2. If Lock-in Months is changed:
+  if (fieldKey === 'lockin_months') {
+    const lockMonths = parseInt(String(trimmed).replace(/\D/g, ''), 10) || 0;
+    if (lockMonths > 0) {
+      currentAgreementState.fields.lockin = {
+        key: 'lockin',
+        value: 'Y',
+        status: 'confirmed',
+        source: 'user_explicit',
+        confidence: 1.0,
+        confirmed_at: new Date().toISOString()
+      };
+      currentAgreementState.fields.lockin_months = {
+        key: 'lockin_months',
+        value: String(lockMonths),
+        status: 'confirmed',
+        source: 'user_explicit',
+        confidence: 1.0,
+        confirmed_at: new Date().toISOString()
+      };
+
+      const startDate = currentAgreementState.fields.agreement_start_date?.value;
+      if (startDate) {
+        const calcLockEnd = addMonthsMinusOneDay(startDate, lockMonths);
+        if (calcLockEnd) {
+          currentAgreementState.fields.lockin_end_date = {
+            key: 'lockin_end_date',
+            value: calcLockEnd,
+            status: 'confirmed',
+            source: 'system_calculated',
+            confidence: 1.0,
+            confirmed_at: new Date().toISOString()
+          };
+        }
+      }
+
+      if (!currentAgreementState.fields.penalty_deduction?.value || currentAgreementState.fields.penalty_deduction.value === '0') {
+        currentAgreementState.fields.penalty_deduction = {
+          key: 'penalty_deduction',
+          value: '30',
+          status: 'confirmed',
+          source: 'system_calculated',
+          confidence: 1.0,
+          confirmed_at: new Date().toISOString()
+        };
+      }
+    } else {
+      currentAgreementState.fields.lockin = {
+        key: 'lockin',
+        value: 'N',
+        status: 'confirmed',
+        source: 'user_explicit',
+        confidence: 1.0,
+        confirmed_at: new Date().toISOString()
+      };
+      currentAgreementState.fields.lockin_months = {
+        key: 'lockin_months',
+        value: '0',
+        status: 'confirmed',
+        source: 'user_explicit',
+        confidence: 1.0,
+        confirmed_at: new Date().toISOString()
+      };
+      delete currentAgreementState.fields.lockin_end_date;
+      delete currentAgreementState.fields.penalty_deduction;
+    }
   }
 
   _activeInlineEditKey = null;
@@ -1513,6 +1796,37 @@ function formatFieldValue(key, val) {
       const num = parseInt(String(val).replace(/,/g, ''), 10);
       if (!isNaN(num)) return `₹${num.toLocaleString('en-IN')}`;
     } catch (e) {}
+  }
+  if (key === 'increase_percent') {
+    const s = String(val).trim();
+    if (!s.startsWith('₹') && !s.endsWith('%')) {
+      const num = parseInt(s.replace(/,/g, ''), 10);
+      if (!isNaN(num) && num >= 100) {
+        return `₹${num.toLocaleString('en-IN')}`;
+      } else if (!isNaN(num)) {
+        return `${num}%`;
+      }
+    }
+    return s;
+  }
+  // Prepend Mr./Ms. prefix for name and careofname fields
+  const nameMatch = key.match(/^(owner\d+|tenant\d+)_(name|careofname)$/);
+  if (nameMatch) {
+    const partyPrefix = nameMatch[1]; // e.g. 'owner1', 'tenant1'
+    const fieldType = nameMatch[2];   // 'name' or 'careofname'
+    const prefixKey = fieldType === 'careofname' ? `${partyPrefix}_careofname_prefix` : `${partyPrefix}_prefix`;
+    let prefixVal = (currentAgreementState?.fields?.[prefixKey]?.value || '').trim();
+    if (!prefixVal) {
+      if (fieldType === 'careofname') {
+        prefixVal = 'Mr.';
+      } else {
+        const careofVal = currentAgreementState?.fields?.[`${partyPrefix}_careof`]?.value;
+        prefixVal = careofVal === 'Husband Name' ? 'Ms.' : 'Mr.';
+      }
+    }
+    if (prefixVal && !String(val).startsWith(prefixVal)) {
+      return `${prefixVal} ${val}`;
+    }
   }
   return String(val);
 }
@@ -1651,7 +1965,28 @@ function appendChatBubble(role, text, chips = [], infoTip = null, profileData = 
 
   const avatar = document.createElement('div');
   avatar.className = 'chat-avatar';
-  avatar.textContent = role === 'user' ? '👤' : '🤖';
+  if (role === 'user') {
+    avatar.textContent = '👤';
+  } else {
+    avatar.setAttribute('aria-label', 'AgreementAI Assistant');
+    avatar.innerHTML = `
+      <svg class="ai-sparkle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#aiSparkleGrad)"/>
+        <path d="M19 3L19.8 5.2L22 6L19.8 6.8L19 9L18.2 6.8L16 6L18.2 5.2L19 3Z" fill="url(#aiSparkleGradSmall)"/>
+        <defs>
+          <linearGradient id="aiSparkleGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#d8b4fe"/>
+            <stop offset="50%" stop-color="#c084fc"/>
+            <stop offset="100%" stop-color="#818cf8"/>
+          </linearGradient>
+          <linearGradient id="aiSparkleGradSmall" x1="16" y1="3" x2="22" y2="9" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#f472b6"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    `;
+  }
 
   const bubble = document.createElement('div');
   bubble.className = 'chat-bubble';
@@ -1724,13 +2059,13 @@ function appendChatBubble(role, text, chips = [], infoTip = null, profileData = 
 
           <div class="chat-profile-inputs-row">
             <div class="chat-profile-field">
-              <label>📱 Mobile Number</label>
-              <input type="tel" class="chat-profile-input" id="ownerPhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(curOwnerPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
+              <label>📱 Mobile Number <span style="font-weight:normal; font-size:11px; color:var(--studio-text-muted);">(Optional)</span></label>
+              <input type="tel" class="chat-profile-input" id="ownerPhoneInput" placeholder="Optional" maxlength="10" value="${escapeHtml(curOwnerPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
               <span class="chat-profile-error" id="ownerPhoneErr">Please enter a valid 10-digit mobile number</span>
             </div>
             <div class="chat-profile-field">
-              <label>📧 Email Address</label>
-              <input type="email" class="chat-profile-input" id="ownerEmailInput" placeholder="name@example.com" value="${escapeHtml(curOwnerEm)}">
+              <label>📧 Email Address <span style="font-weight:normal; font-size:11px; color:var(--studio-text-muted);">(Optional)</span></label>
+              <input type="email" class="chat-profile-input" id="ownerEmailInput" placeholder="Optional" value="${escapeHtml(curOwnerEm)}">
               <span class="chat-profile-error" id="ownerEmailErr">Please enter a valid email address</span>
             </div>
           </div>
@@ -1761,13 +2096,13 @@ function appendChatBubble(role, text, chips = [], infoTip = null, profileData = 
 
           <div class="chat-profile-inputs-row">
             <div class="chat-profile-field">
-              <label>📱 Mobile Number</label>
-              <input type="tel" class="chat-profile-input" id="tenantPhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(curTenantPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
+              <label>📱 Mobile Number <span style="font-weight:normal; font-size:11px; color:var(--studio-text-muted);">(Optional)</span></label>
+              <input type="tel" class="chat-profile-input" id="tenantPhoneInput" placeholder="Optional" maxlength="10" value="${escapeHtml(curTenantPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
               <span class="chat-profile-error" id="tenantPhoneErr">Please enter a valid 10-digit mobile number</span>
             </div>
             <div class="chat-profile-field">
-              <label>📧 Email Address</label>
-              <input type="email" class="chat-profile-input" id="tenantEmailInput" placeholder="name@example.com" value="${escapeHtml(curTenantEm)}">
+              <label>📧 Email Address <span style="font-weight:normal; font-size:11px; color:var(--studio-text-muted);">(Optional)</span></label>
+              <input type="email" class="chat-profile-input" id="tenantEmailInput" placeholder="Optional" value="${escapeHtml(curTenantEm)}">
               <span class="chat-profile-error" id="tenantEmailErr">Please enter a valid email address</span>
             </div>
           </div>
@@ -1811,13 +2146,13 @@ function appendChatBubble(role, text, chips = [], infoTip = null, profileData = 
 
           <div class="chat-profile-inputs-row">
             <div class="chat-profile-field">
-              <label>📱 Mobile Number</label>
-              <input type="tel" class="chat-profile-input" id="${partyRole}PhoneInput" placeholder="10-digit mobile" maxlength="10" value="${escapeHtml(currentPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
+              <label>📱 Mobile Number <span style="font-weight:normal; font-size:11px; color:var(--studio-text-muted);">(Optional)</span></label>
+              <input type="tel" class="chat-profile-input" id="${partyRole}PhoneInput" placeholder="Optional" maxlength="10" value="${escapeHtml(currentPh)}" oninput="this.value = this.value.replace(/\\D/g, '')">
               <span class="chat-profile-error" id="${partyRole}PhoneErr">Please enter a valid 10-digit mobile number</span>
             </div>
             <div class="chat-profile-field">
-              <label>📧 Email Address</label>
-              <input type="email" class="chat-profile-input" id="${partyRole}EmailInput" placeholder="name@example.com" value="${escapeHtml(currentEm)}">
+              <label>📧 Email Address <span style="font-weight:normal; font-size:11px; color:var(--studio-text-muted);">(Optional)</span></label>
+              <input type="email" class="chat-profile-input" id="${partyRole}EmailInput" placeholder="Optional" value="${escapeHtml(currentEm)}">
               <span class="chat-profile-error" id="${partyRole}EmailErr">Please enter a valid email address</span>
             </div>
           </div>
@@ -1950,8 +2285,8 @@ async function submitPartyProfileCard(btnEl, partyRole) {
     }
   }
 
-  // Phone validation (10 digits starting with 6-9)
-  if (!/^[6-9]\d{9}$/.test(phone)) {
+  // Phone validation (optional — validate only if provided)
+  if (phone && !/^[6-9]\d{9}$/.test(phone)) {
     phoneInput?.classList.add('is-invalid');
     if (phoneErr) phoneErr.classList.add('visible');
     isValid = false;
@@ -1960,8 +2295,8 @@ async function submitPartyProfileCard(btnEl, partyRole) {
     if (phoneErr) phoneErr.classList.remove('visible');
   }
 
-  // Email validation
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  // Email validation (optional — validate only if provided)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     emailInput?.classList.add('is-invalid');
     if (emailErr) emailErr.classList.add('visible');
     isValid = false;
@@ -2070,7 +2405,7 @@ async function submitDualPartyProfileCard(btnEl) {
     }
   }
 
-  if (!/^[6-9]\d{9}$/.test(ownerPhone)) {
+  if (ownerPhone && !/^[6-9]\d{9}$/.test(ownerPhone)) {
     ownerPhoneInput?.classList.add('is-invalid');
     if (ownerPhoneErr) ownerPhoneErr.classList.add('visible');
     isValid = false;
@@ -2079,7 +2414,7 @@ async function submitDualPartyProfileCard(btnEl) {
     if (ownerPhoneErr) ownerPhoneErr.classList.remove('visible');
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) {
+  if (ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) {
     ownerEmailInput?.classList.add('is-invalid');
     if (ownerEmailErr) ownerEmailErr.classList.add('visible');
     isValid = false;
@@ -2102,7 +2437,7 @@ async function submitDualPartyProfileCard(btnEl) {
     }
   }
 
-  if (!/^[6-9]\d{9}$/.test(tenantPhone)) {
+  if (tenantPhone && !/^[6-9]\d{9}$/.test(tenantPhone)) {
     tenantPhoneInput?.classList.add('is-invalid');
     if (tenantPhoneErr) tenantPhoneErr.classList.add('visible');
     isValid = false;
@@ -2111,7 +2446,7 @@ async function submitDualPartyProfileCard(btnEl) {
     if (tenantPhoneErr) tenantPhoneErr.classList.remove('visible');
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tenantEmail)) {
+  if (tenantEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tenantEmail)) {
     tenantEmailInput?.classList.add('is-invalid');
     if (tenantEmailErr) tenantEmailErr.classList.add('visible');
     isValid = false;
@@ -2176,7 +2511,29 @@ async function submitDualPartyProfileCard(btnEl) {
     renderPropertySearchCard();
   }
 }
-window.submitDualPartyProfileCard = submitDualPartyProfileCard;
+function showDualPartyProfileCard() {
+  const ownerNameRaw = currentAgreementState.fields?.owner1_name?.value || 'Owner';
+  const ownerPfx = (currentAgreementState.fields?.owner1_prefix?.value || '').trim();
+  const ownerName = (ownerPfx && !ownerNameRaw.startsWith(ownerPfx)) ? `${ownerPfx} ${ownerNameRaw}` : ownerNameRaw;
+  const tenantNameRaw = currentAgreementState.fields?.tenant1_name?.value || 'Tenant';
+  const tenantPfx = (currentAgreementState.fields?.tenant1_prefix?.value || '').trim();
+  const tenantName = (tenantPfx && !tenantNameRaw.startsWith(tenantPfx)) ? `${tenantPfx} ${tenantNameRaw}` : tenantNameRaw;
+
+  appendChatBubble(
+    'assistant',
+    '**Owner & Tenant Details**',
+    [],
+    null,
+    {
+      type: 'party_profile',
+      party_role: 'dual',
+      owner_name: ownerName,
+      tenant_name: tenantName,
+      occupations: ['PRIVATE EMPLOYEE', 'BUSINESS']
+    }
+  );
+}
+window.showDualPartyProfileCard = showDualPartyProfileCard;
 
 /**
  * Handle clicking an inline button inside a chat card
@@ -2198,7 +2555,32 @@ function handleInlineChoiceClick(btnEl, chip) {
     });
   }
 
-  if (action === 'upload_aadhaar_owner' || action === 'upload_aadhaar_tenant') {
+  if (action === 'set_careof_relation') {
+    const role = (chip && chip.role) || 'owner';
+    const partyPrefix = role === 'owner' ? 'owner1_' : 'tenant1_';
+    const chosenVal = value || 'Father Name';
+    if (!currentAgreementState.fields) currentAgreementState.fields = {};
+    currentAgreementState.fields[`${partyPrefix}careof`] = {
+      value: chosenVal,
+      source: 'user_explicit',
+      status: 'confirmed'
+    };
+    localStorage.setItem('agreementai_studio_draft', JSON.stringify(currentAgreementState));
+    syncStateWithBackend();
+
+    const hasOwner = Boolean(currentAgreementState.fields?.owner1_name?.value);
+    const hasTenant = Boolean(currentAgreementState.fields?.tenant1_name?.value);
+    if ((chip && chip.trigger_profile) || (hasOwner && hasTenant)) {
+      setTimeout(() => {
+        showDualPartyProfileCard();
+      }, 150);
+    } else {
+      const nextRole = role === 'owner' ? 'Tenant' : 'Owner';
+      setTimeout(() => {
+        appendChatBubble('assistant', `Got it! Please upload the **${nextRole} Aadhaar ID** on the card above:`);
+      }, 150);
+    }
+  } else if (action === 'upload_aadhaar_owner' || action === 'upload_aadhaar_tenant') {
     const fileInput = document.getElementById('inChatAadhaarInput');
     if (fileInput) fileInput.click();
   } else if (action === 'preview_document') {
@@ -2242,7 +2624,23 @@ function appendLoadingBubble() {
   msgDiv.className = 'chat-msg assistant';
   msgDiv.id = loadId;
   msgDiv.innerHTML = `
-    <div class="chat-avatar">🤖</div>
+    <div class="chat-avatar" aria-label="AgreementAI Assistant">
+      <svg class="ai-sparkle-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#aiSparkleGrad)"/>
+        <path d="M19 3L19.8 5.2L22 6L19.8 6.8L19 9L18.2 6.8L16 6L18.2 5.2L19 3Z" fill="url(#aiSparkleGradSmall)"/>
+        <defs>
+          <linearGradient id="aiSparkleGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#d8b4fe"/>
+            <stop offset="50%" stop-color="#c084fc"/>
+            <stop offset="100%" stop-color="#818cf8"/>
+          </linearGradient>
+          <linearGradient id="aiSparkleGradSmall" x1="16" y1="3" x2="22" y2="9" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#f472b6"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
     <div class="chat-bubble" style="color:var(--studio-text-muted); font-style:italic; display:flex; align-items:center; gap:6px;">
       <span>Thinking...</span>
     </div>

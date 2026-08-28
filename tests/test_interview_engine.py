@@ -54,7 +54,7 @@ class TestAgreementState(unittest.TestCase):
         html = generate_preview_html(flat_dict)
         self.assertIn("Naresh Agarwal", html)
         self.assertIn("Rahul Sharma", html)
-        self.assertIn("35000", html)
+        self.assertIn("35,000", html)
 
 
 class TestInterviewEngine(unittest.TestCase):

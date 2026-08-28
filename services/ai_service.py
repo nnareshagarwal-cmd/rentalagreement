@@ -391,6 +391,14 @@ Extract agreement fields from the user message.
                 if "tenure_months" in confidences:
                     del confidences["tenure_months"]
 
+        # Safeguard: Never allow party profile / contact inputs to be extracted as property_address
+        if "property_address" in extracted_dict:
+            pa_val = str(extracted_dict["property_address"])
+            if re.search(r'\b(?:owner\s+profile|tenant\s+profile|mobile\s+\d|email\s+[^\s@]+@|occupation)\b', pa_val, re.I) or re.search(r'\b(?:owner|tenant)\s+profile\b', user_message, re.I):
+                del extracted_dict["property_address"]
+                if "property_address" in confidences:
+                    del confidences["property_address"]
+
         # 3. Update AgreementState with extracted fields (preserve provenance!)
         newly_extracted_keys = []
         for k, v in extracted_dict.items():
@@ -436,8 +444,10 @@ Extract agreement fields from the user message.
                         current_state.set_field("property_address", resolved["property_address"], source=ProvenanceSource.EXTRACTED_CHAT, confidence=0.98)
                         if "property_address" not in newly_extracted_keys:
                             newly_extracted_keys.append("property_address")
-                    if resolved.get("city") and not current_state.get_value("city"):
-                        current_state.set_field("city", resolved["city"], source=ProvenanceSource.EXTRACTED_CHAT, confidence=0.98)
+                    res_city = resolved.get("city")
+                    curr_city = current_state.get_value("city") or ""
+                    if res_city and (not curr_city or curr_city.lower() in places_service._INVALID_CITY_TOKENS):
+                        current_state.set_field("city", res_city, source=ProvenanceSource.EXTRACTED_CHAT, confidence=0.98)
                         if "city" not in newly_extracted_keys:
                             newly_extracted_keys.append("city")
                     if resolved.get("pincode") and not current_state.get_value("pincode"):
@@ -601,24 +611,37 @@ Extract agreement fields from the user message.
                     f"• ⏱️ **Notice Period:** {notice_p}\n"
                     f"• 🔒 **Lock-in Period:** {lockin_str}"
                 )
+            # If rent escalation (increase_percent) is being answered or completed
+            elif any(k in ("increase_percent", "rent_increase_type") for k in newly_extracted_keys) and current_state.get_value("increase_percent"):
+                rent_v = current_state.get_value("monthly_rent", "-")
+                dep_v = current_state.get_value("security_deposit", "-")
+                maint_v = current_state.get_value("maintenance", "Including")
+                inc_val = current_state.get_value("increase_percent")
+                inc_type = current_state.get_value("rent_increase_type") or "% of Rent"
+                try: rent_v = f"₹{int(str(rent_v).replace(',', '')):,}"
+                except Exception: pass
+                try: dep_v = f"₹{int(str(dep_v).replace(',', '')):,}"
+                except Exception: pass
+                maint_label = "Excluding (Extra)" if maint_v == "Excluding" else "Included in Rent"
+                
+                inc_label = str(inc_val)
+                if not inc_label.startswith("₹") and not inc_label.endswith("%"):
+                    inc_label = f"{inc_label}%"
+                if "fixed" in str(inc_type).lower():
+                    escalation_str = f"Fixed {inc_label} per annum"
+                else:
+                    escalation_str = f"{inc_label} Annual Increase"
+
+                parts.append(
+                    f"✨ **Got it! I've captured financial details:**\n"
+                    f"• 💰 **Monthly Rent:** {rent_v}\n"
+                    f"• 💎 **Security Deposit:** {dep_v}\n"
+                    f"• 💡 **Maintenance:** {maint_label}\n"
+                    f"• 📈 **Rent Increase:** {escalation_str}"
+                )
             elif len(newly_extracted_keys) == 1:
                 k = newly_extracted_keys[0]
-                if k == "maintenance" and current_state.get_value("monthly_rent") and current_state.get_value("security_deposit"):
-                    rent_v = current_state.get_value("monthly_rent")
-                    dep_v = current_state.get_value("security_deposit")
-                    maint_v = current_state.get_value("maintenance")
-                    try: rent_v = f"₹{int(str(rent_v).replace(',', '')):,}"
-                    except Exception: pass
-                    try: dep_v = f"₹{int(str(dep_v).replace(',', '')):,}"
-                    except Exception: pass
-                    maint_label = "Excluding (Extra)" if maint_v == "Excluding" else "Included in Rent"
-                    parts.append(
-                        f"✨ **Got it! I've captured financial details:**\n"
-                        f"• 💰 **Monthly Rent:** {rent_v}\n"
-                        f"• 💎 **Security Deposit:** {dep_v}\n"
-                        f"• 💡 **Maintenance:** {maint_label}"
-                    )
-                elif k == "tenure_months":
+                if k == "tenure_months":
                     end_d = current_state.get_value("agreement_end_date")
                     val = current_state.get_value(k)
                     if end_d:
@@ -638,7 +661,7 @@ Extract agreement fields from the user message.
                         val = "Excluding (Extra)" if val == "Excluding" else "Included in Rent"
                     parts.append(f"✨ **Got it! {label} recorded as {val}**")
             else:
-                financial_keys = {"monthly_rent", "security_deposit", "maintenance"}
+                financial_keys = {"monthly_rent", "security_deposit", "maintenance", "rent_increase_type"}
                 date_keys = {"agreement_start_date", "agreement_end_date", "tenure_months"}
                 owner_keys = {"owner1_name", "owner1_age", "owner1_careofname", "owner1_address", "owner1_careof"}
                 tenant_keys = {"tenant1_name", "tenant1_age", "tenant1_careofname", "tenant1_address", "tenant1_careof"}
@@ -646,7 +669,10 @@ Extract agreement fields from the user message.
 
                 keys_set = set(newly_extracted_keys)
                 if keys_set.issubset(financial_keys) or ("monthly_rent" in keys_set and "security_deposit" in keys_set):
-                    category_label = "financial details"
+                    if not current_state.get_value("increase_percent"):
+                        category_label = "rent terms"
+                    else:
+                        category_label = "financial details"
                 elif keys_set.issubset(date_keys):
                     category_label = "lease duration details"
                 elif keys_set.issubset(owner_keys):
@@ -932,10 +958,10 @@ Extract agreement fields from the user message.
                 cand = re.split(r'\b(?:rent|deposit|depost|start|starts|from|for|to)\b', cand, flags=re.I)[0].strip(' ,.-')
                 if cand and len(cand) > 3:
                     extracted["property_address"] = cand
-        elif cleaned.count(",") >= 2 or re.search(r'\b(road|street|nagar|colony|layout|society|enclave|towers|heights|apartments|villas|kondapur|gachibowli|hitech|madhapur|miyapur|whitefield|indiranagar|koramangala|bellandur|telangana|karnataka|maharashtra|india)\b', cleaned, re.I):
+        elif not re.search(r'\b(?:profile|mobile|email|occupation)\b', cleaned, re.I) and (cleaned.count(",") >= 2 or re.search(r'\b(road|street|nagar|colony|layout|society|enclave|towers|heights|apartments|villas|kondapur|gachibowli|hitech|madhapur|miyapur|whitefield|indiranagar|koramangala|bellandur|telangana|karnataka|maharashtra|india)\b', cleaned, re.I)):
             cand = cleaned.strip()
             cand = re.split(r'\b(?:rent\s+is|deposit\s+is|start\s+date|starts)\b', cand, flags=re.I)[0].strip(' ,.-')
-            if len(cand) > 10 and not cand.lower().startswith(("rent", "deposit", "agreement", "i am", "my name is", "owner is", "tenant is")):
+            if len(cand) > 10 and not cand.lower().startswith(("rent", "deposit", "agreement", "i am", "my name is", "owner is", "tenant is", "owner profile", "tenant profile")):
                 extracted["property_address"] = cand
         
         if not extracted.get("property_address") and ("flat_no" in extracted or "city" in extracted):
@@ -990,6 +1016,36 @@ Extract agreement fields from the user message.
         elif re.search(r'maintenance\s+(?:is\s+)?included|including\s+maintenance|\bincluding\b|\bincluded\b|included\s+in\s+rent', cleaned, re.I):
             extracted["maintenance"] = "Including"
 
+        # 8.1. Rent Increase Type & Value (e.g. "% of rent", "fixed increase", "5%", "5-10%", "10%", "₹1,000", "1500")
+        is_date_msg = bool(re.search(r'\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b|\b(?:start|begin|from|today|date)\b', cleaned, re.I))
+        if not is_date_msg:
+            if re.search(r'(?:%\s*of\s*rent|percentage|percent\s*of\s*rent|\bpercentage\b|\bpercent\b)', cleaned, re.I):
+                extracted["rent_increase_type"] = "% of Rent"
+            elif re.search(r'(?:fixed\s*increase|fixed\s*amount|\bfixed\b)', cleaned, re.I) and not re.search(r'\d+\s*%', cleaned):
+                extracted["rent_increase_type"] = "Fixed Increase"
+
+            # Strict percentage increase pattern (requires explicit % or percent symbol)
+            pct_m = re.search(r'(\d+(?:\.\d+)?)\s*%\s*-\s*(\d+(?:\.\d+)?)\s*%|(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*%|(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*percent|(\d+(?:\.\d+)?)\s*(?:%|percent)\s*(?:increase|escalation|hike|per\s+annum)?', cleaned, re.I)
+            if pct_m:
+                if pct_m.group(1) and pct_m.group(2):
+                    extracted["increase_percent"] = f"{pct_m.group(1)}-{pct_m.group(2)}%"
+                elif pct_m.group(3) and pct_m.group(4):
+                    extracted["increase_percent"] = f"{pct_m.group(3)}-{pct_m.group(4)}%"
+                elif pct_m.group(5) and pct_m.group(6):
+                    extracted["increase_percent"] = f"{pct_m.group(5)}-{pct_m.group(6)}%"
+                elif pct_m.group(7):
+                    extracted["increase_percent"] = f"{pct_m.group(7)}%"
+                if not extracted.get("rent_increase_type"):
+                    extracted["rent_increase_type"] = "% of Rent"
+            elif re.search(r'(?:₹|rs\.?|inr)\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,6})|\b([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,6})\s*(?:fixed|fixed\s+increase|rupees)\b', cleaned, re.I):
+                fx_m = re.search(r'(?:₹|rs\.?|inr)?\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,6})', cleaned, re.I)
+                if fx_m:
+                    num_str = fx_m.group(1).replace(",", "")
+                    if int(num_str) >= 100:  # Avoid single digit numbers like age or tenure
+                        extracted["increase_percent"] = f"₹{int(num_str):,}"
+                        if not extracted.get("rent_increase_type"):
+                            extracted["rent_increase_type"] = "Fixed Increase"
+
         # 9. Lock-in Period (e.g. "no lock-in", "6 months lock-in", "full 11 months", "3 months lock-in")
         if re.search(r'\b(?:no\s+lock[\-\s]*in|zero\s+lock[\-\s]*in|without\s+lock[\-\s]*in|no\s+minimum\s+stay|exit\s+anytime)\b', cleaned, re.I):
             extracted["lockin"] = "N"
@@ -1000,7 +1056,7 @@ Extract agreement fields from the user message.
                 months = lock_match.group(1) or lock_match.group(2) or lock_match.group(3)
                 extracted["lockin_months"] = months
                 extracted["lockin"] = "Y" if int(months) > 0 else "N"
-                extracted["penalty_deduction"] = "60"  # standard 60 days default
+                extracted["penalty_deduction"] = "30"  # standard 30 days default
 
         # 10. Notice Period (e.g. "1 month notice", "2 months notice")
         notice_match = re.search(r'(\d+)\s*months?\s*notice', cleaned, re.I)
@@ -1215,6 +1271,15 @@ Never invent values. Use an empty string for a value that is absent or unclear. 
             else:
                 extracted["careof"] = "Father Name"
 
+            # 2b. Derive name prefix (Mr./Ms.) from gender and relation_type
+            gender_raw = (extracted.get("gender") or "").upper().strip()
+            if gender_raw in ("MALE", "M") or "S/O" in rel_type:
+                extracted["prefix"] = "Mr."
+            elif gender_raw in ("FEMALE", "F") or "D/O" in rel_type or "W/O" in rel_type:
+                extracted["prefix"] = "Ms."
+            # Father or husband in care-of is always male
+            extracted["careofname_prefix"] = "Mr."
+
             # 3. Assemble complete postal address
             addr_parts = []
             for k in ("address_line1", "locality", "city", "state", "pincode"):
@@ -1281,6 +1346,16 @@ Never invent values. Use an empty string for a value that is absent or unclear. 
         if aadhaar_match:
             last4 = aadhaar_match.group(1).replace(" ", "")[-4:]
             extracted["aadhaar_masked"] = f"XXXX-XXXX-{last4}"
+
+        # 6. Derive name prefix (Mr./Ms.) from gender text or relation_type
+        gender_match = re.search(r'\b(MALE|FEMALE)\b', raw_text, re.I)
+        gender_raw = (gender_match.group(1).upper() if gender_match else "")
+        rel_type_raw = (extracted.get("relation_type") or "").upper()
+        if gender_raw == "MALE" or "S/O" in rel_type_raw:
+            extracted["prefix"] = "Mr."
+        elif gender_raw == "FEMALE" or "D/O" in rel_type_raw or "W/O" in rel_type_raw:
+            extracted["prefix"] = "Ms."
+        extracted["careofname_prefix"] = "Mr."
 
         return extracted
 

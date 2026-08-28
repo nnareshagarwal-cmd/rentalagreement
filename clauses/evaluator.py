@@ -11,7 +11,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from field_registry import FIELD_REGISTRY
 from .formatters import (
     _safe_int, clean_text, combine_name_prefix_once, format_careof,
-    format_age, format_ordinal_date, format_rent_increase, extract_city
+    format_age, format_ordinal_date, format_rent_increase, extract_city,
+    format_indian_currency
 )
 
 _PKEY_TO_CANONICAL = {
@@ -234,6 +235,8 @@ def _build_field_map(data):
             val = format_ordinal_date(raw)
         elif key in ("agreement_start_date", "agreement_end_date", "lockin_end_date"):
             val = format_ordinal_date(raw)
+        elif auto_calc == "format_indian" or key in ("monthly_rent", "security_deposit"):
+            val = format_indian_currency(raw)
         elif key == "property_address":
             val = raw.upper()
         elif key == "increase_percent":

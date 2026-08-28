@@ -175,19 +175,155 @@ class PlacesService:
         else:
             full_addr = formatted_address or society
 
+        raw_city = extracted.get("city", "")
+        pincode = extracted.get("pincode", "")
+        clean_city_val = self._resolve_clean_city(raw_city, pincode, full_addr)
+
         return {
             "place_id": place_id,
             "society_name": society,
             "property_address": full_addr,
             "locality": extracted.get("sublocality") or extracted.get("locality", ""),
-            "city": extracted.get("city", ""),
+            "city": clean_city_val,
             "state": extracted.get("state", ""),
             "state_code": extracted.get("state_code", ""),
-            "pincode": extracted.get("pincode", ""),
+            "pincode": pincode,
             "latitude": location.get("latitude"),
             "longitude": location.get("longitude"),
             "source": "google_places",
         }
+
+    _PIN_TO_CITY = {
+        "500": "Hyderabad", "501": "Hyderabad", "502": "Hyderabad", "503": "Nizamabad", "505": "Karimnagar", "506": "Warangal",
+        "560": "Bengaluru", "562": "Bengaluru", "570": "Mysore", "575": "Mangalore", "580": "Hubli",
+        "400": "Mumbai", "401": "Thane", "410": "Navi Mumbai", "411": "Pune", "412": "Pune", "422": "Nashik", "440": "Nagpur",
+        "110": "New Delhi", "122": "Gurugram", "201": "Noida", "121": "Faridabad", "248": "Dehradun",
+        "600": "Chennai", "603": "Chennai", "641": "Coimbatore", "625": "Madurai", "620": "Tiruchirappalli",
+        "700": "Kolkata", "711": "Howrah", "734": "Siliguri", "713": "Durgapur",
+        "380": "Ahmedabad", "395": "Surat", "390": "Vadodara", "360": "Rajkot",
+        "302": "Jaipur", "342": "Jodhpur", "313": "Udaipur", "324": "Kota",
+        "530": "Visakhapatnam", "520": "Vijayawada", "522": "Guntur", "517": "Tirupati", "533": "Kakinada",
+        "682": "Kochi", "695": "Thiruvananthapuram", "673": "Kozhikode", "680": "Thrissur",
+        "226": "Lucknow", "208": "Kanpur", "221": "Varanasi", "282": "Agra", "201": "Ghaziabad", "250": "Meerut", "243": "Bareilly", "211": "Prayagraj",
+        "452": "Indore", "462": "Bhopal", "482": "Jabalpur", "474": "Gwalior", "492": "Raipur", "490": "Bhilai",
+        "160": "Chandigarh", "141": "Ludhiana", "143": "Amritsar", "144": "Jalandhar",
+        "800": "Patna", "834": "Ranchi", "831": "Jamshedpur", "826": "Dhanbad", "827": "Bokaro",
+        "751": "Bhubaneswar", "753": "Cuttack", "769": "Rourkela", "760": "Berhampur", "768": "Sambalpur", "752": "Puri",
+        "781": "Guwahati", "799": "Agartala", "795": "Imphal", "793": "Shillong",
+    }
+
+    _MAJOR_CITIES = [
+        "Hyderabad", "Secunderabad", "Bengaluru", "Bangalore", "Mumbai", "Pune", "Delhi", "New Delhi",
+        "Gurgaon", "Gurugram", "Noida", "Greater Noida", "Chennai", "Kolkata", "Ahmedabad", "Jaipur",
+        "Chandigarh", "Lucknow", "Indore", "Coimbatore", "Kochi", "Thiruvananthapuram", "Visakhapatnam",
+        "Vijayawada", "Mysore", "Mangalore", "Nagpur", "Surat", "Vadodara", "Bhopal", "Patna", "Ranchi",
+        "Ghaziabad", "Faridabad", "Thane", "Navi Mumbai", "Nashik", "Varanasi", "Agra", "Kanpur",
+        "Bhubaneswar", "Cuttack", "Rourkela", "Jamshedpur", "Dhanbad", "Guwahati", "Raipur"
+    ]
+
+    _INVALID_CITY_TOKENS = {
+        "convention", "phase", "sector", "block", "wing", "tower", "heights", "society",
+        "colony", "layout", "enclave", "road", "street", "cross", "main", "gate", "nagar",
+        "apartments", "apartment", "villas", "villa", "residency", "park", "city", "greens",
+        "acres", "gardens", "hall", "palace", "resort", "hotel", "mall", "hub", "bazaar"
+    }
+
+    _LOCAL_PINCODE_MAP = None
+
+    @classmethod
+    def lookup_pincode(cls, pincode: str) -> Optional[Dict[str, str]]:
+        """
+        Resolves any 6-digit Indian PIN code to its official city, district, state.
+        Primary: Queries PostgreSQL `agreement.agr_pincodes`.
+        Fallback: Queries local `data/pincodes_india.json` in memory.
+        """
+        if not pincode:
+            return None
+        clean_pin = re.sub(r'\D', '', str(pincode).strip())
+        if len(clean_pin) != 6:
+            return None
+
+        # 1. Try PostgreSQL lookup
+        try:
+            from database import query_db
+            row = query_db(
+                "SELECT pincode, city, district, division, state, office FROM agreement.agr_pincodes WHERE pincode = %s",
+                (clean_pin,),
+                one=True
+            )
+            if row:
+                return {
+                    "pincode": row.get("pincode"),
+                    "city": row.get("city"),
+                    "district": row.get("district"),
+                    "division": row.get("division"),
+                    "state": row.get("state"),
+                    "office": row.get("office"),
+                }
+        except Exception:
+            pass
+
+        # 2. In-memory local JSON fallback
+        if cls._LOCAL_PINCODE_MAP is None:
+            json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "pincodes_india.json")
+            if os.path.exists(json_path):
+                try:
+                    import json as _json
+                    with open(json_path, "r", encoding="utf-8") as f:
+                        cls._LOCAL_PINCODE_MAP = _json.load(f)
+                except Exception:
+                    cls._LOCAL_PINCODE_MAP = {}
+            else:
+                cls._LOCAL_PINCODE_MAP = {}
+
+        if cls._LOCAL_PINCODE_MAP and clean_pin in cls._LOCAL_PINCODE_MAP:
+            info = cls._LOCAL_PINCODE_MAP[clean_pin]
+            return {
+                "pincode": clean_pin,
+                "city": info.get("city"),
+                "district": info.get("district"),
+                "division": info.get("division"),
+                "state": info.get("state"),
+                "office": info.get("office"),
+            }
+
+        return None
+
+    def _resolve_clean_city(self, candidate_city: str, pincode: str, full_address: str) -> str:
+        """Sanitizes city extraction against invalid Google Maps locality labels using PostgreSQL master."""
+        clean_cand = (candidate_city or "").strip()
+        
+        # 1. Check if full_address text contains any major Indian city name
+        if full_address:
+            for mc in self._MAJOR_CITIES:
+                if re.search(r'\b' + re.escape(mc) + r'\b', full_address, re.I):
+                    if mc.lower() == "bangalore":
+                        return "Bengaluru"
+                    if mc.lower() == "gurgaon":
+                        return "Gurugram"
+                    return mc
+
+        # 2. 6-digit PIN code lookup from PostgreSQL / India Post master
+        if pincode:
+            pin_info = self.lookup_pincode(pincode)
+            if pin_info and pin_info.get("city"):
+                resolved_c = pin_info["city"]
+                if resolved_c.lower() not in self._INVALID_CITY_TOKENS and len(resolved_c) > 2:
+                    return resolved_c
+                if pin_info.get("district"):
+                    return pin_info["district"]
+
+        # 3. 3-digit PIN code prefix fallback
+        if pincode and len(str(pincode).strip()) >= 3:
+            pfx = str(pincode).strip()[:3]
+            if pfx in self._PIN_TO_CITY:
+                return self._PIN_TO_CITY[pfx]
+
+        # 4. If candidate is a known invalid token like 'Convention', 'Phase', 'Tower'
+        if clean_cand.lower() in self._INVALID_CITY_TOKENS:
+            clean_cand = ""
+
+        return clean_cand
 
     def _extract_address_components_new(self, components: List[Dict[str, Any]]) -> Dict[str, str]:
         """Extracts city, state, pin code from Places (New) address components."""
@@ -361,15 +497,19 @@ class PlacesService:
         else:
             full_addr = formatted_address or society
 
+        raw_city = info.get("city", "")
+        pincode = info.get("pincode", "")
+        clean_city_val = self._resolve_clean_city(raw_city, pincode, full_addr)
+
         return {
             "place_id": place_id,
             "society_name": society,
             "property_address": full_addr,
             "locality": info["sublocality"] or info["locality"],
-            "city": info["city"],
+            "city": clean_city_val,
             "state": info["state"],
             "state_code": info["state_code"],
-            "pincode": info["pincode"],
+            "pincode": pincode,
             "latitude": location.get("lat"),
             "longitude": location.get("lng"),
             "source": "google_places",

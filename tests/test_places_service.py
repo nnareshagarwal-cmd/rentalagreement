@@ -39,7 +39,7 @@ class TestPlacesService(unittest.TestCase):
 
         parsed = service._parse_new_place_result(mock_place)
         self.assertEqual(parsed["society_name"], "SMR Vinay City")
-        self.assertEqual(parsed["city"], "Miyapur")  # or Hyderabad
+        self.assertEqual(parsed["city"], "Hyderabad")
         self.assertEqual(parsed["state"], "Telangana")
         self.assertEqual(parsed["state_code"], "TS")
         self.assertEqual(parsed["pincode"], "500049")

@@ -39,6 +39,30 @@ def _safe_int(val, default=1):
     except (ValueError, TypeError):
         return default
 
+def format_indian_currency(val):
+    """
+    Formats a numeric amount into Indian comma grouped format (e.g. 50000 -> 50,000, 150000 -> 1,50,000).
+    """
+    if val is None or str(val).strip() == "":
+        return ""
+    s_raw = str(val).strip()
+    clean = re.sub(r'[^\d]', '', s_raw)
+    if not clean:
+        return s_raw
+    n = int(clean)
+    s = str(n)
+    if len(s) <= 3:
+        return s
+    last_three = s[-3:]
+    other = s[:-3]
+    res = ""
+    while len(other) > 2:
+        res = "," + other[-2:] + res
+        other = other[:-2]
+    if other:
+        res = other + res
+    return res + "," + last_three
+
 def combine_name_prefix_once(prefix, name):
     p = (prefix or '').strip()
     n = (name or '').strip()

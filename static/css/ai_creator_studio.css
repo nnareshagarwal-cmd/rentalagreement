@@ -209,12 +209,33 @@ body.ai-studio-body {
   justify-content: center;
   font-size: 16px;
   flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-msg.assistant .chat-avatar {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(99, 102, 241, 0.25));
-  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(99, 102, 241, 0.18));
+  border: 1px solid rgba(168, 85, 247, 0.38);
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.12);
   color: #c084fc;
+  cursor: default;
+}
+
+.chat-msg.assistant .chat-avatar:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.32), rgba(99, 102, 241, 0.32));
+  border-color: rgba(192, 132, 252, 0.65);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.45), 0 0 6px rgba(192, 132, 252, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px) scale(1.05);
+}
+
+.chat-msg.assistant .chat-avatar .ai-sparkle-icon {
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 1px 3px rgba(168, 85, 247, 0.4));
+  transition: transform 0.3s ease;
+}
+
+.chat-msg.assistant .chat-avatar:hover .ai-sparkle-icon {
+  transform: rotate(8deg) scale(1.1);
 }
 
 .chat-msg.user .chat-avatar {
@@ -1537,10 +1558,36 @@ body.ai-studio-body {
   padding: 7px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.035);
   gap: 12px;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .captured-row:last-child {
   border-bottom: none;
+}
+
+/* AI Field Update Subtle Pulse / Glow Animation */
+@keyframes capturedRowPulse {
+  0% {
+    background: rgba(139, 92, 246, 0.28);
+    box-shadow: 0 0 14px rgba(139, 92, 246, 0.35), inset 0 0 6px rgba(139, 92, 246, 0.15);
+  }
+  25% {
+    background: rgba(139, 92, 246, 0.22);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.25), inset 0 0 4px rgba(139, 92, 246, 0.1);
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+.captured-row.row-updated {
+  animation: capturedRowPulse 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  border-radius: 8px;
 }
 
 .captured-row-label {
@@ -1557,18 +1604,17 @@ body.ai-studio-body {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
 .captured-row-val-group {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
-  flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .captured-row-val {
@@ -1644,6 +1690,7 @@ body.ai-studio-body {
   justify-content: center;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  margin-top: 1px;
   line-height: 1;
 }
 

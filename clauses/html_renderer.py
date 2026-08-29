@@ -298,13 +298,36 @@ def generate_preview_html(data):
 
     html_parts.append("\n".join(conclusion_html))
 
-    # Annexure is optional and belongs after execution and witness blocks.
+    # 7. Annexure (Only rendered if specific items are listed)
     annexure = str(_resolve_value(data, "annexure") or "").strip()
-    if annexure:
-        annexure_lines = [
-            _html.escape(line.strip().upper()) if line.strip() else '&nbsp;'
-            for line in annexure.splitlines()
-        ]
+    bare_keywords = {
+        "none", "no inventory", "standard fixtures only", "standard fixtures only (no separate inventory)",
+        "unfurnished", "un-furnished", "un furnished", "unfurnished (no separate inventory)",
+        "semi-furnished", "semi furnished", "semi-furnished (no separate inventory)",
+        "fully furnished", "fully-furnished", "fully furnished (no separate inventory)"
+    }
+    has_items = False
+    if annexure and annexure.lower() not in bare_keywords:
+        if ":" in annexure:
+            prefix, content = annexure.split(":", 1)
+            content_clean = content.strip().lower()
+            if content_clean and content_clean not in bare_keywords and content_clean not in ("nil", "na", "n/a"):
+                has_items = True
+        else:
+            has_items = True
+
+    if has_items:
+        if ":" in annexure and "\n" not in annexure:
+            prefix, content = annexure.split(":", 1)
+            annexure_lines = [
+                f"<b>{_html.escape(prefix.strip().upper())}</b>",
+                _html.escape(content.strip().upper())
+            ]
+        else:
+            annexure_lines = [
+                _html.escape(line.strip().upper()) if line.strip() else '&nbsp;'
+                for line in annexure.splitlines()
+            ]
         annexure_html = '<br>'.join(annexure_lines)
         html_parts.append(
             '<div class="clause-block" data-clause-id="annexure" '

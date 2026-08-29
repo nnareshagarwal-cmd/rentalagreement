@@ -369,6 +369,25 @@ class EntityExtractor:
             n_months = int(notice_match.group(1))
             extracted["notice_period"] = "1 Month" if n_months == 1 else f"{n_months} Months"
 
+        # 10.5. Property Inventory & Annexure Extraction
+        if re.search(r'\b(?:un[\-\s]*furnished|no\s+inventory|no\s+annexure|standard\s+fixtures?\s+only|skip\s+inventory|skip\s+annexure|without\s+inventory|no\s+furniture)\b', cleaned, re.I):
+            if ":" in cleaned and len(cleaned.split(":", 1)[1].strip()) > 2:
+                extracted["annexure"] = cleaned.strip()
+            else:
+                extracted["annexure"] = "Unfurnished (No separate inventory)"
+        elif re.search(r'\bsemi[\-\s]*furnished\b', cleaned, re.I):
+            extracted["annexure"] = cleaned.strip()
+        elif re.search(r'\bfully[\-\s]*furnished\b', cleaned, re.I):
+            extracted["annexure"] = cleaned.strip()
+        elif re.search(r'^(?:(?:property\s+)?inventory|annexure|fixtures|fittings|furniture|appliances)[:\s\-]+(.+)$', cleaned, re.I | re.DOTALL):
+            inv_m = re.search(r'^(?:(?:property\s+)?inventory|annexure|fixtures|fittings|furniture|appliances)[:\s\-]+(.+)$', cleaned, re.I | re.DOTALL)
+            if inv_m and inv_m.group(1).strip():
+                extracted["annexure"] = inv_m.group(1).strip()
+        elif current_state and ("annexure" not in (current_state.fields or {}) or not current_state.get_value("annexure")) and current_state.get_value("agreement_start_date") and (current_state.get_value("lockin") or current_state.get_value("lockin_months")):
+            # If we are in the Annexure question phase and user lists fixtures/appliances
+            if any(term in cleaned.lower() for term in ("fan", "light", "geyser", "ac", "air conditioner", "kitchen", "wardrobe", "cupboard", "sofa", "bed", "mattress", "tv", "fridge", "refrigerator", "washing machine", "table", "chair", "curtain", "chimney")):
+                extracted["annexure"] = cleaned.strip()
+
         # 11. Dual Party Profile Parsing (e.g. "Owner profile: PRIVATE EMPLOYEE, mobile 9876543210, email owner@test.com. Tenant profile: BUSINESS, mobile 9876543211, email tenant@test.com")
         occ_patterns = [
             (r'\b(?:private\s+(?:employee|sector|job)|pvt\s+emp|software\s+eng(?:ineer)?|it\s+(?:professional|employee)|corporate)\b', "PRIVATE EMPLOYEE"),

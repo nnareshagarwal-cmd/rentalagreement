@@ -665,6 +665,24 @@ class InterviewEngine:
                 ],
             }
 
+        # 8. Property Inventory / Fittings & Fixtures Annexure
+        if "annexure" not in (state.fields or {}) and state.get_value("annexure") is None:
+            return {
+                "type": "question",
+                "focus_area": "annexure",
+                "target_fields": ["annexure"],
+                "question_text": "Would you like to attach a Property Inventory / Fixtures list (Annexure)?",
+                "info_tip": {
+                    "title": "What is an Inventory Annexure?",
+                    "content": "An Annexure lists all electrical fittings, appliances, and furniture provided with the property. It helps prevent deposit disputes at the time of vacating."
+                },
+                "suggestion_chips": [
+                    {"label": "🛋️ Semi-Furnished", "value": "Semi-Furnished", "action": "select_furnishing", "furnishing_type": "Semi-Furnished"},
+                    {"label": "🛋️ Fully Furnished", "value": "Fully Furnished", "action": "select_furnishing", "furnishing_type": "Fully Furnished"},
+                    {"label": "🏢 Unfurnished", "value": "Unfurnished", "action": "select_furnishing", "furnishing_type": "Unfurnished"},
+                ],
+            }
+
         # If everything is answered, return ready state
         return {
             "type": "ready",

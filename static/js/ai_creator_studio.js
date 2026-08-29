@@ -1093,7 +1093,6 @@ const CAPTURED_SECTIONS_CONFIG = [
       { key: 'maintenance', label: 'Maintenance', required: true },
       { key: 'rent_increase_type', label: 'Rent Increase Type', required: false },
       { key: 'increase_percent', label: 'Rent Increase Rate', required: false },
-      { key: 'annexure', label: 'Annexure / Custom Clauses', required: false },
     ]
   },
   {
@@ -1107,6 +1106,14 @@ const CAPTURED_SECTIONS_CONFIG = [
       { key: 'lockin_months', label: 'Lock-in Months', required: false, condition: 'lockin' },
       { key: 'lockin_end_date', label: 'Lock-in End Date', required: false, condition: 'lockin' },
       { key: 'penalty_deduction', label: 'Lock-in Penalty (Days)', required: false, condition: 'lockin' },
+    ]
+  },
+  {
+    id: 'inventory',
+    title: 'Property Inventory & Annexure',
+    icon: '📦',
+    fields: [
+      { key: 'annexure', label: 'Fittings & Inventory', required: false },
     ]
   }
 ];
@@ -1517,9 +1524,10 @@ function openInlineEdit(event, fieldKey) {
         ${optTags}
       </select>
     `;
-  } else if (regDef.type === 'textarea') {
+  } else if (regDef.type === 'textarea' || fieldKey === 'annexure') {
+    const isAnnexure = fieldKey === 'annexure';
     inputHtml = `
-      <textarea class="captured-inline-input textarea-input" id="inlineInput_${fieldKey}" rows="2" placeholder="Enter ${escapeHtml(regDef.label || fieldKey)}...">${escapeHtml(rawValue)}</textarea>
+      <textarea class="captured-inline-input textarea-input ${isAnnexure ? 'annexure-tall-textarea' : ''}" id="inlineInput_${fieldKey}" rows="${isAnnexure ? 6 : 2}" placeholder="Enter ${escapeHtml(regDef.label || fieldKey)}...">${escapeHtml(rawValue)}</textarea>
     `;
   } else if (isDateField) {
     const isoVal = toIsoDate(rawValue);
@@ -1533,12 +1541,13 @@ function openInlineEdit(event, fieldKey) {
     `;
   }
 
+  const isAnnexure = fieldKey === 'annexure';
   valWrap.innerHTML = `
-    <div class="captured-inline-edit-wrap">
+    <div class="captured-inline-edit-wrap ${isAnnexure ? 'tall-edit-wrap' : ''}">
       ${inputHtml}
       <div class="captured-inline-actions">
-        <button type="button" class="captured-inline-save" title="Save (Enter)" onclick="handleInlineSaveClick('${fieldKey}')">✓</button>
-        <button type="button" class="captured-inline-cancel" title="Cancel (Esc)" onclick="cancelInlineEdit()">✕</button>
+        <button type="button" class="captured-inline-save" title="Save" onclick="handleInlineSaveClick('${fieldKey}')">${isAnnexure ? '✓ Save' : '✓'}</button>
+        <button type="button" class="captured-inline-cancel" title="Cancel" onclick="cancelInlineEdit()">${isAnnexure ? '✕ Cancel' : '✕'}</button>
       </div>
     </div>
   `;
@@ -1793,6 +1802,20 @@ function formatFieldValue(key, val) {
     if (prefixVal && !String(val).startsWith(prefixVal)) {
       return `${prefixVal} ${val}`;
     }
+  }
+  if (key === 'annexure') {
+    const s = String(val).trim();
+    const sLower = s.toLowerCase();
+    if (!s || sLower === 'none' || sLower.includes('unfurnished') || sLower.startsWith('no inventory') || sLower.startsWith('standard fixtures only')) {
+      return 'Unfurnished (No separate inventory)';
+    }
+    if (sLower === 'semi-furnished' || sLower === 'semi furnished') {
+      return 'Semi-Furnished (Standard fixtures / No separate itemized list)';
+    }
+    if (sLower === 'fully furnished' || sLower === 'fully-furnished') {
+      return 'Fully Furnished (Standard fixtures / No separate itemized list)';
+    }
+    return s;
   }
   return String(val);
 }
@@ -2553,6 +2576,9 @@ function handleInlineChoiceClick(btnEl, chip) {
     switchStudioTab('preview');
   } else if (action === 'generate_agreement') {
     triggerDocxDownload();
+  } else if (action === 'select_furnishing') {
+    const fType = (chip && chip.furnishing_type) || value || 'Semi-Furnished';
+    showFurnishingInputCard(btnEl, fType);
   } else if (action === 'fill_input' || value.endsWith(' ')) {
     const input = document.getElementById('studioChatInput');
     if (input) {
@@ -2565,6 +2591,107 @@ function handleInlineChoiceClick(btnEl, chip) {
   }
 }
 window.handleInlineChoiceClick = handleInlineChoiceClick;
+
+/**
+ * Render interactive furnishing & inventory input card with a tall vertical insert box
+ */
+function showFurnishingInputCard(btnEl, furnishingType) {
+  const bubble = btnEl.closest('.chat-bubble');
+  if (!bubble) return;
+
+  // Un-disable sibling buttons so user can switch between options if desired
+  const parent = btnEl.closest('.chat-inline-buttons');
+  if (parent) {
+    parent.querySelectorAll('.chat-inline-btn').forEach(b => {
+      b.disabled = false;
+      b.style.opacity = '1';
+      b.classList.toggle('selected', b === btnEl);
+    });
+  }
+
+  // Remove existing card if already rendered
+  let existingCard = bubble.querySelector('.chat-furnishing-card');
+  if (existingCard) existingCard.remove();
+
+  const card = document.createElement('div');
+  card.className = 'chat-furnishing-card';
+
+  let placeholderText = '';
+  let hintText = '';
+  const isUnfurnished = furnishingType.toLowerCase().includes('unfurnished');
+
+  if (furnishingType.toLowerCase().includes('semi')) {
+    placeholderText = 'e.g. 3 Ceiling Fans, 2 Tube Lights, 1 Geyser, Modular Kitchen, 2 Wardrobes (or leave blank for standard)';
+    hintText = 'Type or paste custom fixtures, fittings, and appliances (optional — leave blank if none):';
+  } else if (furnishingType.toLowerCase().includes('fully')) {
+    placeholderText = 'e.g. Sofa, Dining Table, Bed with Mattress, TV, Refrigerator, Washing Machine, ACs, Geysers (or leave blank)';
+    hintText = 'List furniture and appliances included in the property (optional — leave blank if none):';
+  } else {
+    placeholderText = 'Standard Fixtures Only (or enter any specific notes)';
+    hintText = 'Standard basic fittings will be applied with no separate inventory schedule:';
+  }
+
+  card.innerHTML = `
+    <div class="chat-furnishing-header">
+      <div class="chat-furnishing-title">
+        <span>📦 Property Inventory</span>
+      </div>
+      <span class="chat-furnishing-badge">${escapeHtml(furnishingType)}</span>
+    </div>
+    <div class="chat-furnishing-hint">${hintText}</div>
+    <textarea class="chat-furnishing-textarea" id="chatFurnishingInput" placeholder="${escapeHtml(placeholderText)}"></textarea>
+    <div class="chat-furnishing-actions">
+      <button type="button" class="chat-furnishing-skip-btn" onclick="submitFurnishingInventory(this, '${escapeHtml(furnishingType)}', true)">
+        ⚡ Use Default / Blank
+      </button>
+      <button type="button" class="chat-furnishing-submit-btn" onclick="submitFurnishingInventory(this, '${escapeHtml(furnishingType)}', false)">
+        <span>✅ Save & Continue</span>
+      </button>
+    </div>
+  `;
+
+  bubble.appendChild(card);
+
+  // Auto-focus the tall textarea
+  setTimeout(() => {
+    const ta = card.querySelector('#chatFurnishingInput');
+    if (ta) ta.focus();
+  }, 100);
+
+  const container = document.getElementById('studioChatMessages');
+  if (container) container.scrollTop = container.scrollHeight;
+}
+window.showFurnishingInputCard = showFurnishingInputCard;
+
+/**
+ * Submit the entered furnishing inventory items
+ */
+function submitFurnishingInventory(btnEl, furnishingType, isSkip) {
+  const card = btnEl.closest('.chat-furnishing-card');
+  if (!card) return;
+
+  const ta = card.querySelector('#chatFurnishingInput');
+  const userText = isSkip ? '' : (ta ? ta.value.trim() : '');
+
+  // Disable UI in card and inline buttons
+  const bubble = card.closest('.chat-bubble');
+  if (bubble) {
+    bubble.querySelectorAll('.chat-inline-btn').forEach(b => b.disabled = true);
+  }
+  card.querySelectorAll('textarea, button').forEach(el => el.disabled = true);
+
+  btnEl.innerHTML = '<span>Saved ✓</span>';
+
+  let finalMessage = '';
+  if (furnishingType.toLowerCase().includes('unfurnished')) {
+    finalMessage = userText ? `Unfurnished: ${userText}` : 'Unfurnished (No separate inventory)';
+  } else {
+    finalMessage = userText ? `${furnishingType}: ${userText}` : `${furnishingType}`;
+  }
+
+  sendUserMessage(finalMessage);
+}
+window.submitFurnishingInventory = submitFurnishingInventory;
 
 
 /**

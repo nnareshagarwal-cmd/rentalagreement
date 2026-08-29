@@ -249,9 +249,25 @@ def generate_docx(data, template_filename=None, output_path=None):
     p_w_line.add_run("Name:")
     style_run(p_w_line.add_run("\tSignature"), bold=True)
 
-    # Annexure (DOCX)
+    # Annexure (DOCX - Only rendered if specific items are listed)
     annexure = str(_resolve_value(data, "annexure") or "").strip()
-    if annexure:
+    bare_keywords = {
+        "none", "no inventory", "standard fixtures only", "standard fixtures only (no separate inventory)",
+        "unfurnished", "un-furnished", "un furnished", "unfurnished (no separate inventory)",
+        "semi-furnished", "semi furnished", "semi-furnished (no separate inventory)",
+        "fully furnished", "fully-furnished", "fully furnished (no separate inventory)"
+    }
+    has_items = False
+    if annexure and annexure.lower() not in bare_keywords:
+        if ":" in annexure:
+            prefix, content = annexure.split(":", 1)
+            content_clean = content.strip().lower()
+            if content_clean and content_clean not in bare_keywords and content_clean not in ("nil", "na", "n/a"):
+                has_items = True
+        else:
+            has_items = True
+
+    if has_items:
         p_ann_hdr = document.add_paragraph()
         p_ann_hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_ann_hdr.paragraph_format.space_before = Pt(36)
@@ -260,11 +276,15 @@ def generate_docx(data, template_filename=None, output_path=None):
 
         p_ann_body = document.add_paragraph()
         p_ann_body.paragraph_format.space_after = Pt(12)
-        annexure_lines = [line.strip().upper() for line in annexure.splitlines()]
+        if ":" in annexure and "\n" not in annexure:
+            prefix, content = annexure.split(":", 1)
+            annexure_lines = [prefix.strip().upper(), content.strip().upper()]
+        else:
+            annexure_lines = [line.strip().upper() for line in annexure.splitlines()]
         for idx, a_line in enumerate(annexure_lines):
             if idx > 0:
                 p_ann_body.add_run().add_break()
-            style_run(p_ann_body.add_run(a_line), bold=False)
+            style_run(p_ann_body.add_run(a_line), bold=(idx == 0 and len(annexure_lines) > 1))
 
     document.save(output_path)
     return output_path

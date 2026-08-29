@@ -610,6 +610,138 @@ body.ai-studio-body {
   transform: none;
 }
 
+/* ═══════════════════════════════════════════════════════════════════ */
+/* INTERACTIVE FURNISHING & INVENTORY CARD                             */
+/* ═══════════════════════════════════════════════════════════════════ */
+.chat-furnishing-card {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.9), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  animation: fadeInTip 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.chat-furnishing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chat-furnishing-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-furnishing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(139, 92, 246, 0.25);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  color: #c084fc;
+}
+
+.chat-furnishing-hint {
+  font-size: 12px;
+  color: var(--studio-text-muted);
+  line-height: 1.4;
+}
+
+.chat-furnishing-textarea {
+  width: 100%;
+  min-height: 120px;
+  height: 130px;
+  padding: 12px 14px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.chat-furnishing-textarea:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+}
+
+.chat-furnishing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.chat-furnishing-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35);
+  font-family: inherit;
+}
+
+.chat-furnishing-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(99, 102, 241, 0.45);
+}
+
+.chat-furnishing-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.chat-furnishing-skip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: var(--studio-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.chat-furnishing-skip-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* AADHAAR FAST-TRACK KICKSTART CARD                                          */
 /* ══════════════════════════════════════════════════════════════════════════ */
@@ -1796,7 +1928,52 @@ body.ai-studio-body {
 /* For textarea inline edit — allow taller */
 .captured-inline-input.textarea-input {
   resize: vertical;
-  min-height: 44px;
+  min-height: 52px;
+}
+
+/* Big / Tall display and editor for Property Inventory & Annexure */
+.captured-row[data-field-key="annexure"] {
+  align-items: flex-start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.captured-row[data-field-key="annexure"] .captured-row-val {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  max-height: 220px;
+  overflow-y: auto;
+  display: block;
+}
+
+.captured-inline-edit-wrap.tall-edit-wrap {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.captured-inline-input.annexure-tall-textarea {
+  min-height: 130px;
+  height: 140px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  resize: vertical;
+  border-radius: 8px;
+}
+
+.captured-inline-edit-wrap.tall-edit-wrap .captured-inline-actions {
+  justify-content: flex-end;
+}
+
+.captured-inline-edit-wrap.tall-edit-wrap .captured-inline-save,
+.captured-inline-edit-wrap.tall-edit-wrap .captured-inline-cancel {
+  width: auto;
+  height: 28px;
+  padding: 0 14px;
+  font-size: 12px;
+  border-radius: 6px;
 }
 
 /* Footer Actions */

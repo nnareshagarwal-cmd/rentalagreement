@@ -478,6 +478,7 @@ Extract agreement fields from the user message.
                 "notice_period": "⏳ Notice Period",
                 "lockin_months": "🔒 Lock-in",
                 "tenant_poc": "👥 Bachelor SPOC",
+                "annexure": "📦 Property Inventory & Annexure",
             }
             summary_items = []
             for k in newly_extracted_keys:
@@ -546,6 +547,29 @@ Extract agreement fields from the user message.
                     f"• ⏱️ **Notice Period:** {notice_p}\n"
                     f"• 🔒 **Lock-in Period:** {lockin_str}"
                 )
+            elif "annexure" in newly_extracted_keys:
+                annex_val = str(current_state.get_value("annexure", "")).strip()
+                s_lower = annex_val.lower()
+                if any(kw in s_lower for kw in ("unfurnished", "un-furnished", "none", "no inventory", "standard fixtures", "skip")):
+                    parts.append(
+                        "✨ **Got it! Property Inventory & Fixtures (Annexure):**\n"
+                        "• 📦 **Inventory Status:** Unfurnished *(No separate inventory attached)*"
+                    )
+                elif s_lower in ("semi-furnished", "semi furnished"):
+                    parts.append(
+                        "✨ **Got it! Property Inventory & Fixtures (Annexure):**\n"
+                        "• 📦 **Furnishing Type:** Semi-Furnished *(Standard fixtures only / No separate itemized list)*"
+                    )
+                elif s_lower in ("fully furnished", "fully-furnished"):
+                    parts.append(
+                        "✨ **Got it! Property Inventory & Fixtures (Annexure):**\n"
+                        "• 📦 **Furnishing Type:** Fully Furnished *(Standard fixtures only / No separate itemized list)*"
+                    )
+                else:
+                    parts.append(
+                        f"✨ **Got it! I've captured Property Inventory & Fixtures (Annexure):**\n"
+                        f"• 📦 **Included Items / Schedule:** {annex_val}"
+                    )
             elif any(k in ("increase_percent", "rent_increase_type") for k in newly_extracted_keys) and current_state.get_value("increase_percent"):
                 rent_v = current_state.get_value("monthly_rent", "-")
                 dep_v = current_state.get_value("security_deposit", "-")

@@ -206,9 +206,9 @@ FIELD_REGISTRY: List[Dict[str, Any]] = [
     _field("notice_period",    "Notice Period",            "⏳", "select",   "dates",
            "{notice_period}",  "agreement", options=_NOTICE_OPTIONS),
 
-    _field("annexure",         "Annexure",                 "📎", "textarea", "financial",
+    _field("annexure",         "Property Inventory & Annexure", "📦", "textarea", "legal_terms",
            "{annexure}",       "agreement", required=False, wide=True, rows=6,
-           hint="Additional terms (optional)"),
+           hint="List of fittings, fixtures, and appliances (optional)"),
 
     # ── OWNER 1 ──────────────────────────────────────────────────────────────
     _field("owner1_prefix",      "Owner Name Prefix",             "👤", "select",  "owner_1",

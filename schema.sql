@@ -162,6 +162,14 @@ CREATE TABLE IF NOT EXISTS agreement.agr_pincodes (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 11. Indexes for High-Frequency Query Paths
+CREATE INDEX IF NOT EXISTS idx_agr_agreements_user_id ON agreement.agr_agreements(user_id);
+CREATE INDEX IF NOT EXISTS idx_agr_agreements_status ON agreement.agr_agreements(status);
+CREATE INDEX IF NOT EXISTS idx_agr_agreements_created_at ON agreement.agr_agreements(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agr_parties_agreement_id ON agreement.agr_parties(agreement_id);
+CREATE INDEX IF NOT EXISTS idx_agr_properties_agreement_id ON agreement.agr_properties(agreement_id);
+CREATE INDEX IF NOT EXISTS idx_agr_document_uploads_agreement_id ON agreement.agr_document_uploads(agreement_id);
+CREATE INDEX IF NOT EXISTS idx_agr_audit_logs_agreement_id ON agreement.agr_audit_logs(agreement_id);
 CREATE INDEX IF NOT EXISTS idx_agr_pincodes_pincode ON agreement.agr_pincodes(pincode);
 
 -- =========================================================

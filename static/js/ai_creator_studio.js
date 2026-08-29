@@ -72,27 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initStudioChat();
 });
 
-/**
- * Initial sync with backend to get starting readiness, preview, and next question
- */
-async function initStudioChat() {
-  try {
-    const res = await fetch('/api/ai/creator-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: '',
-        agreement_state: currentAgreementState
-      })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      applyStateResponse(data);
-    }
-  } catch (e) {
-    console.warn('[Studio] initStudioChat error:', e);
-  }
-}
 
 /**
  * Fetch field registry and render the Structured Drawer Form
@@ -1774,19 +1753,6 @@ window.handleInlineSaveClick = handleInlineSaveClick;
 
 
 /**
- * Escape HTML to prevent XSS and rendering errors
- */
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
  * Format currency and dates nicely for card display
  */
 function formatFieldValue(key, val) {
@@ -2600,17 +2566,6 @@ function handleInlineChoiceClick(btnEl, chip) {
 }
 window.handleInlineChoiceClick = handleInlineChoiceClick;
 
-/**
- * Clear draft and restart fresh
- */
-function clearDraftAndRestart() {
-  localStorage.removeItem('agreementai_studio_draft');
-  const urlParams = new URLSearchParams(window.location.search);
-  const type = urlParams.get('type') || 'simple_rental';
-  const state = urlParams.get('state') || 'KA';
-  window.location.href = `/create?type=${encodeURIComponent(type)}&state=${encodeURIComponent(state)}&fresh=1`;
-}
-window.clearDraftAndRestart = clearDraftAndRestart;
 
 /**
  * Append loading indicator bubble
@@ -2704,9 +2659,14 @@ function toggleFormDrawer() {
   const drawer = document.getElementById('studioDrawer');
   const backdrop = document.getElementById('studioDrawerBackdrop');
   if (!drawer) return;
+  const isOpening = !drawer.classList.contains('active');
   drawer.classList.toggle('active');
   if (backdrop) backdrop.classList.toggle('active');
+  if (isOpening) {
+    syncDrawerInputs();
+  }
 }
+window.toggleFormDrawer = toggleFormDrawer;
 
 /**
  * Save Agreement Draft
@@ -2718,7 +2678,9 @@ function saveAgreementDraft() {
     ind.textContent = '✓ Draft saved';
     setTimeout(() => { ind.textContent = 'Draft auto-saved'; }, 2000);
   }
+  appendChatBubble('assistant', '💾 **Progress saved!** Your draft is safely preserved.');
 }
+window.saveAgreementDraft = saveAgreementDraft;
 
 /**
  * Clear all draft data and restart from the fresh role-selection greeting
@@ -3117,42 +3079,4 @@ async function handleStudioDateSelected(input) {
 window.triggerStudioDatePicker = triggerStudioDatePicker;
 window.handleStudioDateSelected = handleStudioDateSelected;
 
-/**
- * Toggle Structured Form Inspector Drawer
- */
-function toggleFormDrawer() {
-  const drawer = document.getElementById('studioDrawer');
-  const backdrop = document.getElementById('studioDrawerBackdrop');
-  if (!drawer) return;
-  const isOpen = drawer.classList.contains('open');
-  if (isOpen) {
-    drawer.classList.remove('open');
-    if (backdrop) backdrop.classList.remove('open');
-  } else {
-    drawer.classList.add('open');
-    if (backdrop) backdrop.classList.add('open');
-    syncDrawerInputs();
-  }
-}
-window.toggleFormDrawer = toggleFormDrawer;
 
-/**
- * Save progress toast
- */
-function saveAgreementDraft() {
-  localStorage.setItem('agreementai_studio_draft', JSON.stringify(currentAgreementState));
-  appendChatBubble('assistant', '💾 **Progress saved!** Your draft is safely preserved.');
-}
-window.saveAgreementDraft = saveAgreementDraft;
-
-/**
- * Clear draft and restart from fresh
- */
-function clearDraftAndRestart() {
-  localStorage.removeItem('agreementai_studio_draft');
-  const params = new URLSearchParams(window.location.search);
-  const type = params.get('type') || 'simple_rental';
-  const state = params.get('state') || 'KA';
-  window.location.href = `/create?type=${encodeURIComponent(type)}&state=${encodeURIComponent(state)}&fresh=1`;
-}
-window.clearDraftAndRestart = clearDraftAndRestart;
